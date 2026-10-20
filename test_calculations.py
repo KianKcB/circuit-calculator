@@ -4,7 +4,7 @@ import math
 import unittest
 from decimal import Decimal
 
-from calculations import parallel_resistance, series_resistance
+from calculations import calculate_ohms_law, parallel_resistance, series_resistance
 
 
 class SeriesResistanceTests(unittest.TestCase):
@@ -20,7 +20,7 @@ class SeriesResistanceTests(unittest.TestCase):
     def test_rejects_empty_or_non_iterable_input(self):
         for value in ([], (), iter(())):
             with self.subTest(value=value):
-                with self.assertRaisesRegex(ValueError, "not be empty"):
+                with self.assertRaisesRegex(ValueError, "can't be empty"):
                     series_resistance(value)
         for value in (None, 5, "12", b"12"):
             with self.subTest(value=value):
@@ -88,6 +88,55 @@ class ParallelResistanceTests(unittest.TestCase):
             with self.subTest(value=value):
                 with self.assertRaises(ValueError):
                     parallel_resistance([value])
+
+
+class OhmsLawTests(unittest.TestCase):
+    def test_calculates_each_variable_from_the_other_two(self):
+        self.assertEqual(calculate_ohms_law(current=2, resistance=5, solve_for="voltage"), 10)
+        self.assertEqual(calculate_ohms_law(voltage=10, resistance=5, solve_for="current"), 2)
+        self.assertEqual(calculate_ohms_law(voltage=10, current=2, solve_for="resistance"), 5)
+
+    def test_supports_signed_voltage_and_current_and_decimal_inputs(self):
+        self.assertEqual(calculate_ohms_law(current=-2, resistance=5, solve_for="voltage"), -10)
+        self.assertEqual(calculate_ohms_law(voltage=Decimal("10"), resistance=Decimal("4"),
+                                            solve_for="current"), 2.5)
+        self.assertEqual(calculate_ohms_law(voltage=-10, current=-2, solve_for="resistance"), 5)
+
+    def test_requires_exactly_two_values_and_a_valid_target(self):
+        invalid_calls = (
+            {"solve_for": "voltage"},
+            {"current": 2, "solve_for": "voltage"},
+            {"current": 2, "resistance": 5, "voltage": 10, "solve_for": "voltage"},
+            {"voltage": 10, "current": 2, "solve_for": "voltage"},
+            {"current": 2, "resistance": 5, "solve_for": "power"},
+        )
+        for kwargs in invalid_calls:
+            with self.subTest(kwargs=kwargs):
+                with self.assertRaises(ValueError):
+                    calculate_ohms_law(**kwargs)
+
+    def test_rejects_invalid_values_and_negative_resistance(self):
+        for value in ("10", None, object(), True, 1 + 2j):
+            with self.subTest(value=value):
+                with self.assertRaises(TypeError):
+                    calculate_ohms_law(current=value, resistance=5, solve_for="voltage")
+
+        for value in (math.nan, math.inf, -math.inf, Decimal("NaN"), Decimal("Infinity")):
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, "finite"):
+                    calculate_ohms_law(voltage=value, resistance=5, solve_for="current")
+
+        with self.assertRaisesRegex(ValueError, "non-negative"):
+            calculate_ohms_law(current=2, resistance=-5, solve_for="voltage")
+
+        with self.assertRaisesRegex(ValueError, "negative resistance"):
+            calculate_ohms_law(voltage=-10, current=2, solve_for="resistance")
+
+    def test_reports_undefined_division_cases(self):
+        with self.assertRaisesRegex(ValueError, "resistance is zero"):
+            calculate_ohms_law(voltage=10, resistance=0, solve_for="current")
+        with self.assertRaisesRegex(ValueError, "current is zero"):
+            calculate_ohms_law(voltage=0, current=0, solve_for="resistance")
 
 if __name__ == "__main__":
     unittest.main()
