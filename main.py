@@ -2,7 +2,14 @@
 
 import sys
 
-from calculations import calculate_ohms_law, parallel_resistance, series_resistance
+from calculations import (
+    calculate_current_divider,
+    calculate_ohms_law,
+    calculate_power,
+    calculate_voltage_divider,
+    parallel_resistance,
+    series_resistance,
+)
 
 
 def _read_resistances(input_fn, output_fn):
@@ -24,6 +31,17 @@ def _read_number(input_fn, label, unit):
         return float(entry)
     except ValueError as error:
         raise ValueError(f"'{entry}' is not a valid number for {label}") from error
+
+
+def _read_one_based_selection(input_fn, item_name, item_count):
+    entry = input_fn(f"Choose a {item_name} (1-{item_count}): ").strip()
+    try:
+        selection = int(entry)
+    except ValueError as error:
+        raise ValueError(f"'{entry}' is not a valid {item_name} number") from error
+    if selection < 1 or selection > item_count:
+        raise ValueError(f"{item_name.capitalize()} must be between 1 and {item_count}")
+    return selection
 
 
 def _calculate_series(input_fn, output_fn):
@@ -63,6 +81,63 @@ def _calculate_with_ohms_law(input_fn, output_fn):
         raise ValueError("Choose 1 for voltage, 2 for current, or 3 for resistance")
 
 
+def _calculate_power(input_fn, output_fn):
+    output_fn("Calculate power from: 1) Voltage and current  2) Current and resistance  3) Voltage and resistance")
+    choice = input_fn("Choose known quantities: ").strip()
+
+    if choice == "1":
+        voltage = _read_number(input_fn, "voltage", "V")
+        current = _read_number(input_fn, "current", "A")
+        power = calculate_power(voltage=voltage, current=current)
+    elif choice == "2":
+        current = _read_number(input_fn, "current", "A")
+        resistance = _read_number(input_fn, "resistance", "Ω")
+        power = calculate_power(current=current, resistance=resistance)
+    elif choice == "3":
+        voltage = _read_number(input_fn, "voltage", "V")
+        resistance = _read_number(input_fn, "resistance", "Ω")
+        power = calculate_power(voltage=voltage, resistance=resistance)
+    else:
+        raise ValueError("Choose 1 for voltage and current, 2 for current and resistance, or 3 for voltage and resistance")
+
+    output_fn(f"Power: {power} W")
+
+
+def _calculate_dividers(input_fn, output_fn):
+    output_fn("1. Voltage divider (series circuit)")
+    output_fn("2. Current divider (parallel circuit)")
+    output_fn("3. Return to main menu")
+    choice = input_fn("Choose a divider: ").strip()
+
+    if choice == "3":
+        return
+    if choice not in ("1", "2"):
+        raise ValueError("Choose 1 for voltage divider, 2 for current divider, or 3 to return")
+
+    if choice == "1":
+        input_voltage = _read_number(input_fn, "total input voltage", "V")
+        resistances = _read_resistances(input_fn, output_fn)
+        if not resistances:
+            raise ValueError("at least one series resistor is required")
+        selection = _read_one_based_selection(input_fn, "resistor", len(resistances))
+        voltage_drop = calculate_voltage_divider(input_voltage, resistances, selection - 1)
+        output_fn(
+            f"Voltage across resistor {selection} ({resistances[selection - 1]} Ω): "
+            f"{voltage_drop} V"
+        )
+    else:
+        input_current = _read_number(input_fn, "total input current", "A")
+        resistances = _read_resistances(input_fn, output_fn)
+        if not resistances:
+            raise ValueError("at least one parallel branch is required")
+        selection = _read_one_based_selection(input_fn, "branch", len(resistances))
+        branch_current = calculate_current_divider(input_current, resistances, selection - 1)
+        output_fn(
+            f"Current through branch {selection} ({resistances[selection - 1]} Ω): "
+            f"{branch_current} A"
+        )
+
+
 def run_cli(input_fn=None, output_fn=None):
     """Run the menu; optional I/O functions make the CLI easy to test."""
     if input_fn is None:
@@ -75,7 +150,9 @@ def run_cli(input_fn=None, output_fn=None):
         output_fn("1. Calculate equivalent resistance in series")
         output_fn("2. Calculate equivalent resistance in parallel")
         output_fn("3. Use Ohm's law")
-        output_fn("4. Exit")
+        output_fn("4. Calculate electrical power")
+        output_fn("5. Calculate voltage/current dividers")
+        output_fn("6. Exit")
 
         try:
             choice = input_fn("Choose an option: ").strip()
@@ -86,10 +163,14 @@ def run_cli(input_fn=None, output_fn=None):
             elif choice == "3":
                 _calculate_with_ohms_law(input_fn, output_fn)
             elif choice == "4":
+                _calculate_power(input_fn, output_fn)
+            elif choice == "5":
+                _calculate_dividers(input_fn, output_fn)
+            elif choice == "6":
                 output_fn("Goodbye.")
                 return
             else:
-                raise ValueError("Choose an option from 1 to 4")
+                raise ValueError("Choose an option from 1 to 6")
         except (TypeError, ValueError, OverflowError) as error:
             output_fn(f"Error: {error}")
         except (EOFError, KeyboardInterrupt):
