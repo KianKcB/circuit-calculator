@@ -6,6 +6,11 @@ I/O; `circuit.py` owns immutable, validated electrical data. The new `dc.py` own
 linear DC assembly, topology checks, solution and results. None depends on a GUI.
 Future persistence and schematic layout must be separate clients of the model.
 
+Packaging declares those same four modules explicitly; their public import paths
+are preserved. The console command calls `main.main`, shared with direct script
+execution. Base installation is dependency-free; the dc extra supplies NumPy.
+See DEVELOPMENT.md for the >=3.11 installation floor and current CI target.
+
 ## DC milestone design (2026-10-27)
 
 Scope: positive finite resistors and signed independent voltage/current sources,

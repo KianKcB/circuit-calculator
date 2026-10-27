@@ -1,29 +1,72 @@
 # Development workflow
 
 Read PROJECT_STATUS.md, ARCHITECTURE.md and ROADMAP.md, then inspect current Git
-status; recorded status is not a substitute for live inspection. Preserve staged
-and unstaged user changes. Do not commit, push, reset or switch branches without
-the user's authorization.
+status. Preserve staged and unstaged user changes. Do not commit, push, reset or
+switch branches without the user's authorization.
 
-The repository currently runs directly from its root. The formula CLI needs only
-the standard library. For DC solving in a separate environment:
+## Python and installation policy
+
+The installable package requires Python >=3.11. Maintained CI targets CPython
+3.11-3.14 on Windows and Linux; other versions/platforms are not in the matrix.
+This replaces the previously unverified README Python 3.7 support claim. The
+existing flat imports and direct script execution remain supported. The current
+local package version is 0.1.0; no release or registry publication has occurred.
+The project's license is still undecided; no license grant is invented by packaging.
+
+For source development on Windows:
 
 ```text
 python -m venv .venv
-.venv\Scripts\python -m pip install -r requirements-dc.txt
-.venv\Scripts\python -m unittest -v
+.venv/Scripts/python -m pip install -e .
+.venv/Scripts/python -B -m unittest -v
 ```
 
-The above setup is guidance, not a claim a fresh installation was tested.
-Local verification used Python 3.11.9 and pre-existing NumPy 1.26.4. README's
-Python 3.7 minimum is historical; compatibility is not verified on that runtime.
-Avoid newer syntax until a minimum-version decision is made.
+For the pinned DC validation baseline:
+
+```text
+.venv/Scripts/python -m pip install -c constraints-ci.txt -e ".[dc]"
+.venv/Scripts/python -B -m unittest -v
+```
+
+Linux/macOS use `.venv/bin/python` instead. Editable installs are convenient for
+development but do not prove wheel/sdist contents are correct. Base runtime has
+no third-party dependencies. `requirements-dc.txt` retains the source-only NumPy
+installation path and matches the `[dc]` extra's broader compatibility range.
+
+## Build and verify distributions
+
+```text
+python -m venv .venv-build
+.venv-build/Scripts/python -m pip install -r requirements-build.txt
+.venv-build/Scripts/python -m build
+python -B scripts/check_distributions.py
+```
+
+Use an empty `dist/` before a new version build. The checker requires exactly one
+wheel to prevent accidentally testing a stale version. Build creates a source
+archive and then a wheel from that archive. The checker creates a temporary venv
+under ignored `.build-check/`, installs that exact local wheel with no dependency
+resolution, tests core-only behavior, installs its DC extra with constraints,
+checks dependencies, and tests the full DC installation. It never modifies the
+caller's environment. Repeat using each Python interpreter you want to verify.
+
+Pinned frontend dependencies are in requirements-build.txt; the backend is pinned
+in pyproject.toml and the DC baseline in constraints-ci.txt. Update pins deliberately
+and rerun installed checks. The broad runtime NumPy range is not a lockfile.
+Pins stabilize resolution, not bit-identical archives or hosted OS images.
+
+## CI and change protocol
+
+`.github/workflows/tests.yml` runs the same build and fresh-install checks on push,
+pull request and manual dispatch, across Windows/Linux and CPython 3.11-3.14.
+Official checkout/setup-python actions are pinned to verified v7 commit SHAs;
+contents permission is read-only and checkout credentials are not persisted.
+Local success is not proof that hosted jobs have run. No upload/publish step exists.
 
 Before each feature, document scope, physical laws, units, sign conventions,
 degenerate cases, API, compatibility, alternatives and acceptance tests. Keep
-domain data, numerical algorithms and I/O separate. Run focused tests, then
-the full suite. Record exact outcomes and unresolved limitations. Stop at a
-coherent review checkpoint and update the next action in PROJECT_STATUS.md.
+domain data, numerical algorithms and I/O separate. Run focused tests, then the
+full suite. Record exact outcomes and limits. Stop at a coherent review checkpoint
+and update the next action in PROJECT_STATUS.md.
 
-No lint/type-check/CI or packaging configuration exists yet. Add a minimal
-toolchain in a distinct foundation batch; do not claim these checks have run.
+Lint/type-check tooling remains deferred; stdlib unittest is the test runner.

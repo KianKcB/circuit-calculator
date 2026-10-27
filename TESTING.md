@@ -6,6 +6,7 @@
 python -B -m unittest -v
 python -B -m unittest -v test_dc
 python -B -S -m unittest -v
+python -B scripts/check_distributions.py
 git diff --check
 ```
 
@@ -13,6 +14,17 @@ git diff --check
 standard-library baseline and DC assembly while NumPy solve tests skip. Skips
 are not solver verification. Without NumPy installed, use requirements-dc.txt
 before assessing the full solver suite.
+
+`scripts/check_distributions.py` requires a built wheel in `dist/` (see
+DEVELOPMENT.md). It tests a fresh venv first without NumPy, then with the pinned
+DC extra. Product modules must resolve inside that venv. Test files alone are
+copied into a temporary directory outside the source modules and run using
+isolated Python. Both the installed command and `python -m main` are exercised.
+DC checks fail if any test is skipped. Core-only checks verify missing-dependency
+advice and explicitly accept optional-solver skips.
+
+The GitHub workflow targets CPython 3.11–3.14 on Windows/Linux. Hosted results
+are not available until the workflow has actually been committed/pushed and run.
 
 ## Layers and references
 
@@ -42,6 +54,14 @@ Expected reference answers are derived independently and must not be changed to
 accommodate an implementation error.
 
 ## Latest local run: 2026-10-27
+
+PKG-1 on Windows: the unchanged 110-test source suite passed on Python 3.11.9
+and 3.14.6. Fresh installed wheels passed 97 tests with 13 expected skips in
+core-only mode, then all 110 with no skips under NumPy 2.4.6, on both interpreters.
+Installed console/module commands, missing-dependency advice, imports from the
+venv, known-answer DC result and `pip check` also passed. An isolated build made
+the source archive and its wheel; archive contents/metadata were inspected.
+Workflow YAML/matrix parsed locally; no hosted CI run is claimed.
 
 NUM-1, Python 3.11.9 / NumPy 1.26.4: 110 tests passed with no skips. Without
 site-packages: 97 passed and 13 solver tests skipped. This batch started at 81

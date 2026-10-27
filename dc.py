@@ -228,7 +228,10 @@ def solve_dc(circuit: Circuit) -> DCResult:
     try:
         import numpy as np
     except ImportError as error:
-        raise ImportError("DC solving requires: python -m pip install -r requirements-dc.txt") from error
+        raise ImportError(
+            'DC solving requires the [dc] extra; install NumPy with: '
+            'python -m pip install "numpy>=1.26.4,<3"'
+        ) from error
 
     size = len(system.rhs)
     condition = 1.0

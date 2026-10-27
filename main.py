@@ -184,7 +184,12 @@ def run_cli(input_fn=None, output_fn=None):
             return
 
 
-if __name__ == "__main__":
+def main():
+    """Installed command entry point, also used by direct script execution."""
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     run_cli()
+
+
+if __name__ == "__main__":
+    main()

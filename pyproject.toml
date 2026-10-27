@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools==84.2.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "circuit-calculator"
+version = "0.1.0"
+description = "Electrical formulas and validated linear DC circuit analysis"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+
+[project.optional-dependencies]
+dc = ["numpy>=1.26.4,<3"]
+
+[project.scripts]
+circuit-calculator = "main:main"
+
+[tool.setuptools]
+py-modules = ["calculations", "circuit", "dc", "main"]

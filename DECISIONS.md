@@ -1,5 +1,44 @@
 # Decisions
 
+## 2026-10-27: PKG-1 installation and continuous integration
+
+Goal: make distribution contents and optional-dependency behavior testable in
+fresh environments, with a maintained Python-version target. Preserve all four
+flat public modules/import paths and direct `python main.py` use. Use explicit
+setuptools py-modules, not a source-tree migration. The installed command shares
+the existing UTF-8 entry point. Version 0.1.0 describes this first local package;
+no registry publication or licensing choice is implied. No project license has
+been selected; distribution remains local pending the user's licensing decision.
+
+Set installation minimum to Python 3.11; maintained CI target is CPython
+3.11-3.14 on Windows/Linux. The older README 3.7 claim was never runtime-verified.
+These versions are not all claimed verified until checks actually run. Newer
+versions may install but are outside the current matrix. No source-language
+rewrite is needed. This is a documented packaging support-policy change.
+
+Base runtime has zero third-party dependencies. NumPy is an optional dc extra
+(`>=1.26.4,<3`); source users retain requirements-dc.txt with the same range.
+CI uses a pinned NumPy 2.4.6 baseline, plus pinned build frontend/dependencies and
+setuptools backend. Broad runtime range is compatibility policy, not a complete
+lock. Pins stabilize dependency resolution, not bit-identical wheels or moving
+hosted runners. No lock/hash or vulnerability-audit claim is made.
+
+Use GitHub Actions' official checkout/setup-python actions and read-only contents
+permissions. Each job builds an sdist then a wheel from that sdist, installs the
+local wheel into a fresh venv, verifies core-only behavior, installs the dc extra
+under constraints, and verifies the full suite with no skips. Test modules alone
+are copied outside the checkout; isolated Python must load product modules from
+the venv. Exercise console and module commands, missing-NumPy advice and a known
+DC circuit. Reuse stdlib unittest and subprocess instead of adding tox/pytest.
+Acceptance: clean build/install checks on available local runtimes; no installed
+test/source leakage; all numerical tests preserved; CI configured and clearly
+distinguished from actual hosted-run evidence. Packaging/CI deployment/publishing
+is out of scope; user controls commits/pushes.
+
+References: [PyPA pyproject guide](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/),
+[official setup-python](https://github.com/actions/setup-python),
+[Python version status](https://devguide.python.org/versions/).
+
 ## 2026-10-27: NUM-1 standalone numerical repair
 
 Scope: the six audited defects in series/parallel resistance, Ohm's law and

@@ -23,15 +23,19 @@ A small Python command-line tool for calculating equivalent resistance in series
 | `test_dc.py` | Analytical reference circuits and solver failure tests. |
 | `test_calculations.py` | Unit tests for the calculations and CLI behavior. |
 | `test_numerical_calculations.py` | Extreme-value regressions, numeric-type compatibility and independent power references. |
+| `pyproject.toml` | Package metadata, optional DC dependency and installed CLI command. |
+| `.github/workflows/tests.yml` | Windows/Linux installation and test matrix. |
+| `scripts/check_distributions.py` | Fresh-venv checks of the built wheel and installed test suite. |
 | `.gitignore` | Excludes Python caches, virtual environments, test caches, and local environment files. |
 
 ## Requirements and setup
 
-- Python 3.7 or newer.
+- Python 3.11 or newer; the maintained CI target is CPython 3.11–3.14 on
+  Windows and Linux. Newer versions are outside the current test matrix.
 - The formula CLI and circuit model need only the standard library. DC solving
-  requires NumPy: `python -m pip install -r requirements-dc.txt`.
-- Locally verified with Python 3.11.9 and NumPy 1.26.4. The historical Python 3.7
-  minimum has not been tested in the current environment.
+  adds the optional NumPy dependency.
+- Version 0.1.0 is currently a local development package. Installation commands
+  below use this checkout; it has not been published to a package registry.
 
 Open a terminal in the project directory and check that Python is available:
 
@@ -39,13 +43,36 @@ Open a terminal in the project directory and check that Python is available:
 python --version
 ```
 
-For formula-only use there is no dependency installation step. On systems where the Python command is named `python3`, use `python3` in place of `python` in the commands below.
+For an isolated installation from this directory on Windows:
+
+```text
+python -m venv .venv
+.venv\Scripts\python -m pip install .
+.venv\Scripts\circuit-calculator
+```
+
+For DC support, install the extra instead:
+
+```text
+.venv\Scripts\python -m pip install ".[dc]"
+```
+
+On Linux/macOS the equivalent paths are `.venv/bin/python` and
+`.venv/bin/circuit-calculator`. macOS is not currently in the CI matrix.
+The base install has no third-party runtime dependencies; building/installing
+uses setuptools. Source-only formula use still needs no installation step.
+Existing imports such as `from circuit import Circuit` remain supported.
+
+For development and repeatable dependency checks, see [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Run the application
 
 ```bash
 python main.py
 ```
+
+After installation you can also use `circuit-calculator` from the environment's
+Scripts/bin directory, or `python -m main` with that environment's interpreter.
 
 Choose an operation from the menu:
 

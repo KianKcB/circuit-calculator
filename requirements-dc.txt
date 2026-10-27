@@ -1,2 +1,3 @@
-# Optional DC solver dependency. Verified locally with NumPy 1.26.4.
-numpy>=1.21,<3
+# Compatibility shortcut for source-checkout users; matches the dc package extra.
+# For repeatable validation also pass: -c constraints-ci.txt
+numpy>=1.26.4,<3

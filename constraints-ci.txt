@@ -1,0 +1,3 @@
+# Repeatable DC validation baseline on CPython 3.11-3.14.
+# Runtime compatibility remains broader in pyproject.toml.
+numpy==2.4.6

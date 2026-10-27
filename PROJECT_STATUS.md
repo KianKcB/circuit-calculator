@@ -1,9 +1,9 @@
 # Project status and continuation
 
-Date: 2026-10-27. DC-1 is committed as `2f4bbe9` with the user-provided commit
-message. The working tree was clean at the start of NUM-1. NUM-1 changes below
-are local and uncommitted; no commit or push was performed by the agent.
-Always recheck the working tree before continuing.
+Date: 2026-10-27. DC-1 is committed as `2f4bbe9`; NUM-1 is committed as `8ce68fb`.
+The working tree was clean at the start of PKG-1. PKG-1 changes below are local
+and uncommitted; no commit or push was performed by the agent. Always recheck
+the working tree before continuing.
 
 ## Initial audit
 
@@ -119,7 +119,7 @@ Final validation after the last source change:
 
 ## Batch NUM-1: standalone numerical reliability
 
-Status: VERIFIED locally, ready for review. Depends on the existing scalar APIs;
+Status: VERIFIED locally, committed as `8ce68fb`. Depends on the existing scalar APIs;
 no new dependency. Base commit `2f4bbe9`; no pre-existing uncommitted modifications.
 
 - `calculations.py`: shared finite-value validation, native series type handling,
@@ -152,13 +152,59 @@ real arithmetic. Current-divider negligible-weight underflow and voltage-divider
 total-overflow rejection are unchanged. No cross-version/platform tests,
 installation checks or large-scale benchmarks were added in this batch.
 
+## Batch PKG-1: installation and CI foundation
+
+Status: local installation VERIFIED; hosted CI CONFIGURED, NOT YET RUN.
+Base `8ce68fb`, no pre-existing uncommitted modifications. This batch adds:
+
+- `pyproject.toml`: explicit flat modules, version 0.1.0, Python >=3.11,
+  zero base runtime dependencies, optional NumPy dc extra, installed command.
+- `main.main`: shared console/script entry point retaining UTF-8 output.
+- `dc.py`: missing-NumPy advice usable from an installed environment.
+- Pinned build backend/frontend and NumPy validation baseline; source dependency
+  shortcut aligned with package metadata; source manifest and output ignore rules.
+- Two stdlib verification scripts: fresh venv, local wheel installation,
+  isolated product imports outside checkout, copied tests, console/module CLI,
+  missing optional dependency and known-answer DC smoke checks.
+- `.github/workflows/tests.yml`: eight Windows/Linux jobs across CPython
+  3.11-3.14, each building an sdist and a wheel from it, then checking both
+  installation modes. Official action commit SHAs verified through GitHub API.
+- Setup, support policy, testing and roadmap documents synchronized.
+
+Actual local verification on Windows:
+
+| Interpreter | Source suite | Fresh installed core | Fresh installed DC (NumPy 2.4.6) |
+| --- | --- | --- | --- |
+| Python 3.11.9 | 110 passed | 97 passed, 13 expected skips | 110 passed, no skips |
+| Python 3.14.6 | 110 passed | 97 passed, 13 expected skips | 110 passed, no skips |
+
+Commands: `python -B -m unittest -q`, `py -3.14 -B -m unittest -q`,
+`.venv-build/Scripts/python -m build`, `python -B scripts/check_distributions.py`,
+and `py -3.14 -B scripts/check_distributions.py`. Both installed modes exercised
+console and module entry points. Both DC environments passed `pip check`.
+Archive inspection confirmed exactly four product modules in the wheel,
+optional-only NumPy metadata and tests/scripts/pins in the source archive.
+Workflow YAML parsed and matrix checked locally. No numerical test changes.
+
+Support-policy change: install floor is now 3.11; the historical unverified 3.7
+claim is retired. CI targets 3.11-3.14; 3.12/3.13 and Linux await actual hosted
+execution. Newer Python versions may install but are not supported by the current
+matrix. Source tests also passed with the pre-existing NumPy 1.26.4 (3.11) and
+2.5.2 (3.14); those are additional evidence, not fully locked environments.
+
+Limits: no hosted workflow has run, no registry publication, no project license
+selection, no hash lock or bit-reproducible build guarantee. Generic flat module
+names remain for compatibility; a future namespace migration needs a separate
+plan. Local build artifacts and build venv are ignored. Temporary install-check
+venvs were removed by the check scripts after their runs.
+
 ## Exact next action
 
-Review NUM-1 as a coherent commit candidate. Suggested commit message:
-`Fix numerical range handling in scalar calculations and CLI input`.
+Review PKG-1 as a coherent commit candidate. Suggested commit message:
+`Add installable package and CI for core and DC environments`.
 The user handles staging/commits/pushes.
 
-Next batch: reproducible installation and a minimal CI workflow, with an explicit
-supported Python-version decision and separate formula-only/full-DC validation.
-Then native persistence and a DC user workflow before GUI work. See ROADMAP.md
-for all long-term phases and acceptance gates.
+After pushing, inspect the first hosted workflow run before claiming CI is
+verified. Next development batch: native versioned JSON persistence with strict
+schema/type validation, deterministic round trips and malformed-input tests,
+followed by a DC CLI workflow before GUI work. See ROADMAP.md for long-term gates.

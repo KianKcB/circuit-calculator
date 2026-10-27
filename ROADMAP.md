@@ -7,7 +7,7 @@ direction; research items require a separate feasibility decision.
 | Phase | Status | Scope, dependency and acceptance gate |
 | --- | --- | --- |
 | 0 Audit | VERIFIED | All six source/document/test files plus ignore rules and Git state inspected; 59 baseline tests passed; findings in PROJECT_STATUS.md. |
-| 1 Foundation | IN PROGRESS | CLI/core split preserved; documentation and optional dependency declared. NUM-1 numerical repairs verified with native-type compatibility and CLI range tests. Packaging, CI and version matrix remain planned. |
+| 1 Foundation | IN PROGRESS | NUM-1 numerical repairs verified. PKG-1 package and fresh core/DC installations verified on Windows Python 3.11/3.14. CI configured for Windows/Linux 3.11-3.14; hosted runs pending. |
 | 2 Circuit model | VERIFIED for current DC subset | Immutable nodes and R/V/I components, explicit orientation and declared reference. Solver adds topology checks. Persistence, hierarchy and multi-terminal components remain planned. |
 | 3 Linear DC | VERIFIED for documented small-network subset | MNA, node voltages, all branch currents/power, topology and numerical diagnostics. Analytical examples and conservation tests required. No claim of arbitrary-range or large-network reliability. |
 | 4 Advanced DC | NOT STARTED | Controlled sources, wires/zero-ohm contraction, equivalent ports, superposition, floating-subnetwork policy and broader conditioning study; depend on phase 3. Each needs independent references and uniqueness tests. |
@@ -24,17 +24,18 @@ direction; research items require a separate feasibility decision.
 | 15 SPICE interoperability | NOT STARTED | Selected syntax and external benchmark suite; backend/version/license review first. Reject unsupported directives and document model differences. |
 | 16 Specialized analysis | DEFERRED | Small-signal, noise, pole-zero, distortion, multiport, thermal and transmission-line features each require a separate mathematical specification and references. |
 | 17 Research extensions | DEFERRED | Mixed-signal, RF/distributed, multiphysics, fitting, optimization, plugins and external APIs; feasibility and maintenance assessment before approval. |
-| 18 Distribution/maintenance | NOT STARTED | Installable package, entry points, releases, platform matrix, benchmarks, migrations and notices; incrementally introduce before user distribution, not only at roadmap end. |
+| 18 Distribution/maintenance | IN PROGRESS | Local installable package 0.1.0 and console entry point verified. CI version/platform matrix configured; hosted evidence pending. Publishing, licensing, releases, benchmarks and migrations remain planned. |
 
 ## Next reviewable batches
 
-1. Strengthen installation/CI reproducibility and test the declared Python range.
+1. Inspect first hosted CI run after the user pushes; local package checks are complete.
 2. Native versioned JSON persistence plus a programmatic DC example/CLI workflow;
    round-trip and malformed-input tests before GUI work.
 3. Decide GUI framework, then build the first supported DC editing vertical slice.
 
 NUM-1 is complete locally: all six original numerical reproducers are covered by
-regressions, plus CLI underflow parsing. Review/commit remains the user's action.
+regressions, plus CLI underflow parsing; committed as 8ce68fb. PKG-1 installation
+and CI configuration is ready for review. Review/commit remains the user's action.
 
 Advanced DC can proceed independently where a concrete user circuit needs it.
 Do not require all controlled devices or semiconductor models before a useful GUI.

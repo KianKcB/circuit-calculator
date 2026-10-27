@@ -1,0 +1,5 @@
+# Pinned build frontend and its dependencies for CPython 3.11-3.14.
+build==1.6.1
+packaging==26.3
+pyproject-hooks==1.2.0
+colorama==0.4.6; sys_platform == "win32"
