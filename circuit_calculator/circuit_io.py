@@ -1,11 +1,10 @@
 """Strict versioned JSON persistence; see CIRCUIT_FORMAT.md for the contract."""
 
 from dataclasses import dataclass
-from decimal import Decimal, DecimalException
-import json
-import os
-from pathlib import Path
-import tempfile
+from decimal import Decimal
+
+from ._document_io import (string_field, object_fields, loads_json, dumps_json,
+                           read_utf8, atomic_write)
 
 from circuit_calculator.circuit import Circuit, CurrentSource, Resistor, VoltageSource
 
@@ -21,15 +20,7 @@ class CircuitFormatError(ValueError):
 
 
 def _string(value, field, limit):
-    if not isinstance(value, str):
-        raise CircuitFormatError(f'{field} must be a string')
-    if len(value) > limit:
-        raise CircuitFormatError(f'{field} exceeds {limit} characters')
-    try:
-        value.encode('utf-8')
-    except UnicodeEncodeError as error:
-        raise CircuitFormatError(f'{field} must contain valid Unicode') from error
-    return value
+    return string_field(value, field, limit, CircuitFormatError)
 
 
 @dataclass(frozen=True)
@@ -53,16 +44,11 @@ _ELEMENTS = {
 
 
 def _fields(value, expected, field):
-    if not isinstance(value, dict):
-        raise CircuitFormatError(f'{field} must be an object')
-    missing = set(expected) - value.keys()
-    unknown = value.keys() - set(expected)
-    if missing or unknown:
-        raise CircuitFormatError(
-            f'{field}: missing fields {sorted(missing)}; unknown fields {sorted(unknown)}')
+    object_fields(value, expected, field, CircuitFormatError)
 
 
-def _document_from_data(data):
+def document_from_data(data):
+    """Validate native v1 JSON data (also used inside schematic projects)."""
     _fields(data, ('format', 'version', 'metadata', 'circuit'), 'document')
     if data['format'] != 'circuit-calculator':
         raise CircuitFormatError('document.format must be circuit-calculator')
@@ -111,67 +97,13 @@ def _document_from_data(data):
     return CircuitDocument(circuit, **metadata)
 
 
-def _unique_object(pairs):
-    result = {}
-    for key, value in pairs:
-        if key in result:
-            raise CircuitFormatError(f'duplicate JSON object key: {key!r}')
-        result[key] = value
-    return result
-
-
-def _reject_constant(value):
-    raise CircuitFormatError(f'non-finite JSON number is not supported: {value}')
-
-
-def _check_text(text):
-    if not isinstance(text, str):
-        raise TypeError('document text must be a string')
-    if len(text) > MAX_BYTES:
-        raise CircuitFormatError(f'document exceeds {MAX_BYTES} UTF-8 bytes')
-    try:
-        size = len(text.encode('utf-8'))
-    except UnicodeEncodeError as error:
-        raise CircuitFormatError('document must contain valid Unicode') from error
-    if size > MAX_BYTES:
-        raise CircuitFormatError(f'document exceeds {MAX_BYTES} UTF-8 bytes')
-    depth = 0
-    quoted = escaped = False
-    for char in text:
-        if quoted:
-            if escaped:
-                escaped = False
-            elif char == '\\':
-                escaped = True
-            elif char == '"':
-                quoted = False
-        elif char == '"':
-            quoted = True
-        elif char in '[{':
-            depth += 1
-            if depth > MAX_DEPTH:
-                raise CircuitFormatError(f'JSON nesting exceeds {MAX_DEPTH}')
-        elif char in ']}':
-            depth -= 1
-
-
 def loads_document(text: str) -> CircuitDocument:
     """Load strict JSON text without evaluating expressions or resolving files."""
-    _check_text(text)
-    try:
-        data = json.loads(text, object_pairs_hook=_unique_object,
-                          parse_float=Decimal, parse_constant=_reject_constant)
-    except json.JSONDecodeError as error:
-        raise CircuitFormatError(f'invalid JSON at line {error.lineno}, column {error.colno}: {error.msg}') from error
-    except (ValueError, RecursionError, DecimalException) as error:
-        if isinstance(error, CircuitFormatError):
-            raise
-        raise CircuitFormatError(f'invalid JSON: {error}') from error
-    return _document_from_data(data)
+    return document_from_data(loads_json(text, MAX_BYTES, MAX_DEPTH, CircuitFormatError))
 
 
-def dumps_document(document: CircuitDocument) -> str:
-    """Produce deterministic version-1 JSON, applying the same limits as loading."""
+def document_to_data(document: CircuitDocument) -> dict:
+    """Return owned, validated native v1 JSON data for export or embedding."""
     if type(document) is not CircuitDocument:
         raise TypeError('document must be a CircuitDocument')
     if len(document.circuit.nodes) > MAX_NODES or len(document.circuit.elements) > MAX_ELEMENTS:
@@ -188,43 +120,22 @@ def dumps_document(document: CircuitDocument) -> str:
             'metadata': {'title': document.title, 'description': document.description},
             'circuit': {'nodes': list(document.circuit.nodes), 'elements': elements,
                         'reference_node': document.circuit.reference_node}}
-    _document_from_data(data)
-    text = json.dumps(data, ensure_ascii=False, allow_nan=False, indent=2, sort_keys=True) + '\n'
-    _check_text(text)
-    return text
+    document_from_data(data)
+    return data
+
+
+def dumps_document(document: CircuitDocument) -> str:
+    """Produce deterministic version-1 JSON, applying the same limits as loading."""
+    return dumps_json(document_to_data(document), MAX_BYTES, MAX_DEPTH, CircuitFormatError)
 
 
 def load_document(path) -> CircuitDocument:
     """Read a size-bounded UTF-8 local document. Filesystem errors remain OSError."""
-    with Path(path).open('rb') as stream:
-        content = stream.read(MAX_BYTES + 1)
-    if len(content) > MAX_BYTES:
-        raise CircuitFormatError(f'document exceeds {MAX_BYTES} UTF-8 bytes')
-    try:
-        text = content.decode('utf-8')
-    except UnicodeDecodeError as error:
-        raise CircuitFormatError('document file must be UTF-8') from error
-    return loads_document(text)
+    return loads_document(read_utf8(path, MAX_BYTES, CircuitFormatError))
 
 
 def save_document(document: CircuitDocument, path, *, overwrite=False) -> None:
     """Atomically create a document; existing paths require explicit overwrite=True."""
     if type(overwrite) is not bool:
         raise TypeError('overwrite must be a bool')
-    content = dumps_document(document).encode('utf-8')
-    destination = Path(path)
-    temporary = None
-    try:
-        with tempfile.NamedTemporaryFile(dir=destination.parent, prefix='.circuit-',
-                                         suffix='.tmp', delete=False) as stream:
-            temporary = Path(stream.name)
-            stream.write(content)
-            stream.flush()
-            os.fsync(stream.fileno())
-        if overwrite:
-            os.replace(temporary, destination)
-        else:
-            os.link(temporary, destination)
-    finally:
-        if temporary is not None:
-            temporary.unlink(missing_ok=True)
+    atomic_write(dumps_document(document).encode('utf-8'), path, overwrite=overwrite)

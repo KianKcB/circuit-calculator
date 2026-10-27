@@ -231,7 +231,10 @@ def main(argv=None):
     dc_parser.add_argument('path', help='UTF-8 circuit JSON file')
     gui_parser = commands.add_parser('gui', help='open the Tk DC network editor')
     gui_parser.add_argument('--example', action='store_true', help='start with a divider example')
+    gui_parser.add_argument('path', nargs='?', help='schematic project (.ccproj.json) to open')
     args = parser.parse_args(argv)
+    if args.command == 'gui' and args.path is not None and args.example:
+        parser.error('choose a project path or --example, not both')
     if args.command is None:
         run_cli()
         return 0
@@ -240,7 +243,11 @@ def main(argv=None):
             from circuit_calculator.gui import launch
             from circuit_calculator.schematic import divider_example
             try:
-                launch(divider_example() if args.example else None)
+                if args.path is not None:
+                    from circuit_calculator.project_io import load_project
+                    launch(project=load_project(args.path), path=args.path)
+                else:
+                    launch(divider_example() if args.example else None)
             except ImportError as error:
                 raise ImportError('The GUI requires Tkinter/Tk from your Python distributor') from error
         else:

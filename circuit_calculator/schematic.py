@@ -213,6 +213,15 @@ class EditorSession:
         self.state = state
         self._invalidate()
 
+    def reset(self, state):
+        """Start a new document boundary without reusing a worker revision."""
+        if type(state) is not Schematic:
+            raise TypeError('Expected a Schematic')
+        self.state = state
+        self._undo.clear()
+        self._redo.clear()
+        self._invalidate()
+
     def undo(self):
         if self._undo:
             self._redo.append(self.state)

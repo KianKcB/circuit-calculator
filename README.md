@@ -14,7 +14,7 @@ network analysis, and a Tk desktop editor prototype.
 - **Interactive CLI:** guides you through each calculation, shows units, and returns to the menu after successful calculations or handled input errors.
 - **Native circuit documents:** versioned JSON with circuit metadata, strict input validation and safe explicit saves.
 - **DC file command:** solves a supported circuit document and returns JSON results with units and diagnostics.
-- **Desktop prototype:** Tk junction editor for explicit R/V/I connections, wires, reference selection, undo/redo, circuit import/export and DC results.
+- **Desktop prototype:** Tk junction editor with R/V/I connections, wires, reference selection, undo/redo, project save/reopen, circuit import/export and DC results.
 
 ## Project layout
 
@@ -35,7 +35,9 @@ circuit-calculator/
 Application modules live together in `circuit_calculator/`: `circuit.py` is the
 model, `calculations.py` standalone formulas, `dc.py` analysis, `circuit_io.py`
 persistence, `schematic.py` editor state, `gui.py` Tk rendering, and `cli.py` command
-handling. Start with [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for current
+handling. `project_io.py` stores graphical projects; `_document_io.py` shares
+strict JSON and atomic-file handling between the two formats.
+Start with [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for current
 progress and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for development commands.
 
 ## Requirements and setup
@@ -44,7 +46,7 @@ progress and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for development commands
   Windows and Linux. Newer versions are outside the current test matrix.
 - The formula CLI and circuit model need only the standard library. DC solving
   adds the optional NumPy dependency.
-- Version 0.3.1 is currently a local development package. Installation commands
+- Version 0.4.0 is currently a local development package. Installation commands
   below use this checkout; it has not been published to a package registry.
 
 Open a terminal in the project directory and check that Python is available:
@@ -279,15 +281,34 @@ for the framework decision and supported scope.
    include node voltages, branch currents/power and conservation diagnostics.
    Edits clear results and stale worker results are discarded.
 
-**Open circuit** arranges a native JSON circuit automatically. **Export circuit**
-saves electrical connectivity and metadata; **layout is not saved**. Reopening
-resolves wire-connected nodes into nets and arranges them again. The editor
-warns before discarding unsaved work. Limits: 100 junctions, 200 components,
+**Open Project**, **Save Project** (Ctrl+S), and **Save As** preserve junction
+positions, individual wires, circuit metadata, zoom and pan in `.ccproj.json`
+files. Opening a project clears old results/history and restores its editable
+graph. Unsaved changes offer Save / Discard / Cancel; canceled or failed saves
+keep your document open. Camera changes mark the project dirty without discarding
+valid electrical results. A different window size may clamp the restored pan.
+
+**Import circuit** arranges a native electrical JSON circuit automatically.
+**Export circuit** saves resolved electrical connectivity and metadata only;
+it does not mark your graphical project saved. The two formats are separate.
+Limits: 100 junctions, 200 components,
 400 wires and 200 DC unknowns. A wire that shorts both terminals of a component
 produces an explicit unsupported-short error.
 
-This is a junction-based prototype. Graphical-project save/load, independent
-component placement/rotation, wire segment routing/splitting and the complete
+Open the included graphical project directly:
+
+```text
+python -m circuit_calculator gui examples/divider.ccproj.json
+```
+
+The equivalent installed command is `circuit-calculator gui FILE.ccproj.json`.
+Projects can be saved even while the circuit is unfinished or not yet solvable.
+No cached simulation results or Undo/Redo history are loaded from disk.
+See [SCHEMATIC_FORMAT.md](docs/SCHEMATIC_FORMAT.md) for the strict project schema,
+limits, API and atomic-save semantics.
+
+This is a junction-based prototype. Independent component placement/rotation,
+wire segment routing/splitting and the complete
 schematic editor remain planned. The electrical model and solver stay independent
 of Tk and layout coordinates.
 
@@ -295,7 +316,7 @@ of Tk and layout coordinates.
 
 The following are planned ideas and are **not implemented**:
 
-- Full schematic editing and graphical-project persistence beyond the network prototype.
+- Component-centric schematic editing and wire routing beyond the network prototype.
 - Extended DC analysis with controlled sources and equivalent-port calculations.
 - RC and RLC circuit analysis.
 

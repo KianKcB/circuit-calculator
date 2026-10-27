@@ -3,19 +3,26 @@
 from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal, InvalidOperation
 import math
+from pathlib import Path
 
 from circuit_calculator.circuit import Circuit, CurrentSource, Resistor, VoltageSource
 from circuit_calculator.circuit_io import CircuitDocument, load_document, save_document
 from circuit_calculator.schematic import (EditorSession, Position, Schematic, Wire, component,
                        divider_example, terminals, value_of)
+from circuit_calculator.project_io import (SchematicProject, ViewState, load_project,
+                                          save_project as write_project)
 
 
 class CircuitEditor:
-    def __init__(self, root, state=None):
+    def __init__(self, root, state=None, *, project=None, project_path=None):
         import tkinter as tk
         from tkinter import ttk
         self.tk, self.ttk, self.root = tk, ttk, root
-        self.session = EditorSession(state or Schematic.from_document(CircuitDocument(Circuit(('n1',), ()))))
+        if project is not None and state is not None:
+            raise TypeError('Choose state or project, not both')
+        self.session = EditorSession(project.schematic if project is not None else
+                                     state or Schematic.from_document(CircuitDocument(Circuit(('n1',), ()))))
+        self.project_path = Path(project_path).resolve() if project_path is not None else None
         self.mode, self.pending, self.selected = 'select', None, None
         self.drag_node = None
         self.zoom = 1.0
@@ -33,13 +40,18 @@ class CircuitEditor:
         ttk.Label(header, text='DC network editor', foreground='#526477').pack(side='left', padx=18)
         actions = ttk.Frame(root, padding=(10, 0, 10, 8))
         actions.pack(fill='x')
+        edit_actions = ttk.Frame(root, padding=(10, 0, 10, 8))
+        edit_actions.pack(fill='x')
         self.buttons = {}
         for label, command in (('New', self.new), ('Example', self.example),
-                               ('Open circuit', self.open), ('Export circuit', self.export),
+                               ('Open Project', self.open_project), ('Save Project', self.save_project),
+                               ('Save As', self.save_project_as), ('Import circuit', self.open),
+                               ('Export circuit', self.export),
                                ('Undo', self.undo), ('Redo', self.redo),
                                ('Edit value', self.edit_value), ('Delete', self.delete),
                                ('Simulate DC', self.simulate)):
-            button = ttk.Button(actions, text=label, command=command)
+            parent = edit_actions if label in ('Undo', 'Redo', 'Edit value', 'Delete', 'Simulate DC') else actions
+            button = ttk.Button(parent, text=label, command=command)
             button.pack(side='left', padx=2)
             self.buttons[label] = button
         tools = ttk.Frame(root, padding=(10, 0, 10, 8))
@@ -60,8 +72,8 @@ class CircuitEditor:
         body.add(drawing, weight=4)
         self.canvas = tk.Canvas(drawing, bg='#f6f9fc', highlightthickness=1,
                                 highlightbackground='#ccd7e2', scrollregion=(-500, -500, 3000, 3000))
-        xscroll = ttk.Scrollbar(drawing, orient='horizontal', command=self.canvas.xview)
-        yscroll = ttk.Scrollbar(drawing, orient='vertical', command=self.canvas.yview)
+        xscroll = ttk.Scrollbar(drawing, orient='horizontal', command=lambda *args: self._scroll('x', *args))
+        yscroll = ttk.Scrollbar(drawing, orient='vertical', command=lambda *args: self._scroll('y', *args))
         self.canvas.configure(xscrollcommand=xscroll.set, yscrollcommand=yscroll.set)
         self.canvas.grid(row=0, column=0, sticky='nsew')
         yscroll.grid(row=0, column=1, sticky='ns')
@@ -75,19 +87,51 @@ class CircuitEditor:
                                padx=10, pady=10, state='disabled', font=('Consolas', 10))
         self.results.pack(fill='both', expand=True, pady=8)
         ttk.Label(root, text='Connect explicit junctions. Crossings and proximity do not connect. '
-                  'Circuit exports preserve electrical connections; layout resets on reopen.',
+                  'Project saves include layout; circuit exports contain electrical connections only.',
                   padding=(14, 6), foreground='#526477', wraplength=1100).pack(fill='x')
         self.canvas.bind('<Button-1>', self.click)
         self.canvas.bind('<B1-Motion>', self.motion)
         self.canvas.bind('<ButtonRelease-1>', self.release)
         self.canvas.bind('<Double-Button-1>', lambda event: self.edit_value())
         self.canvas.bind('<ButtonPress-2>', lambda event: self.canvas.scan_mark(event.x, event.y))
-        self.canvas.bind('<B2-Motion>', lambda event: self.canvas.scan_dragto(event.x, event.y, gain=1))
+        self.canvas.bind('<B2-Motion>', self._pan)
         root.bind('<Escape>', lambda event: self.cancel())
         root.bind('<Control-z>', lambda event: self.undo())
         root.bind('<Control-y>', lambda event: self.redo())
         root.bind('<F5>', lambda event: self.simulate())
+        root.bind('<Control-s>', lambda event: self.save_project())
+        root.bind('<Control-Shift-S>', lambda event: self.save_project_as())
+        root.bind('<Control-o>', lambda event: self.open_project())
         self.draw()
+        self.root.update_idletasks()
+        if project is not None:
+            self._restore_view(project.view)
+        self._clean_project = self._snapshot()
+        self._update_dirty()
+
+    def _snapshot(self):
+        return SchematicProject(self.session.state,
+                                ViewState(self.zoom, self.canvas.xview()[0], self.canvas.yview()[0]))
+
+    def _restore_view(self, view):
+        self.zoom = view.zoom
+        self.draw()
+        self.root.update_idletasks()
+        self.canvas.xview_moveto(view.scroll_x)
+        self.canvas.yview_moveto(view.scroll_y)
+
+    def _update_dirty(self):
+        self.dirty = self._snapshot() != self._clean_project
+        name = self.project_path.name if self.project_path is not None else 'Untitled'
+        self.root.title(f'Circuit Calculator — {name}{" *" if self.dirty else ""}')
+
+    def _scroll(self, axis, *args):
+        getattr(self.canvas, axis + 'view')(*args)
+        self._update_dirty()
+
+    def _pan(self, event):
+        self.canvas.scan_dragto(event.x, event.y, gain=1)
+        self._update_dirty()
 
     def _text(self, text):
         self.results.configure(state='normal')
@@ -113,9 +157,9 @@ class CircuitEditor:
         previous = self.session.revision
         self.session.apply(state)
         if previous != self.session.revision:
-            self.dirty = True
             self._text('Results cleared after edit.\nRun Simulate DC to analyze the current circuit.')
         self.draw()
+        self._update_dirty()
 
     def _error(self, error):
         self.status.set(str(error))
@@ -287,6 +331,7 @@ class CircuitEditor:
     def change_zoom(self, factor):
         self.zoom = min(2.5, max(.4, self.zoom * factor))
         self.draw()
+        self._update_dirty()
 
     def undo(self):
         before = self.session.revision
@@ -300,10 +345,10 @@ class CircuitEditor:
 
     def _history_changed(self, before):
         if self.session.revision != before:
-            self.dirty = True
             self.selected = self.pending = None
             self._text('Results cleared after Undo/Redo. Run Simulate DC again.')
             self.draw()
+            self._update_dirty()
 
     def edit_value(self):
         from tkinter import simpledialog
@@ -331,34 +376,90 @@ class CircuitEditor:
 
     def _discard(self):
         from tkinter import messagebox
-        return not self.dirty or messagebox.askyesno('Discard edits?',
-            'Discard the current unsaved editor changes?', parent=self.root)
+        if not self.dirty:
+            return True
+        answer = messagebox.askyesnocancel('Unsaved project',
+            'Save project changes before continuing?', parent=self.root)
+        if answer is None:
+            return False
+        return self.save_project() if answer else True
+
+    def _reset_document(self, state, view=None, path=None):
+        self.session.reset(state)
+        self.project_path = Path(path).resolve() if path is not None else None
+        self.selected = self.pending = self.drag_node = None
+        self.tool.set('select')
+        self.mode = 'select'
+        self._restore_view(view or ViewState())
+        self._clean_project = self._snapshot()
+        self._update_dirty()
+        self._text('No current simulation result. Run Simulate DC for this document.')
 
     def new(self):
         if self._discard():
-            self._apply(Schematic.from_document(CircuitDocument(Circuit(('n1',), ()))))
-            self.selected = self.pending = None
+            self._reset_document(Schematic.from_document(CircuitDocument(Circuit(('n1',), ()))))
 
     def example(self):
         if self._discard():
-            self._apply(divider_example())
-            self.selected = self.pending = None
+            self._reset_document(divider_example())
             self.status.set('Example: select Simulate DC. Expected output at out: 8 V.')
 
     def open(self):
         from tkinter import filedialog
-        if not self._discard():
-            return
         path = filedialog.askopenfilename(parent=self.root, filetypes=[('Circuit JSON', '*.json')])
+        if not path or not self._discard():
+            return
         if path:
             try:
                 state = Schematic.from_document(load_document(path))
-                self._apply(state)
-                self.selected = self.pending = None
-                self.dirty = False
+                self._reset_document(state)
                 self.status.set('Opened electrical circuit. Junction positions were arranged automatically.')
             except (ValueError, TypeError, OSError) as error:
                 self._error(error)
+
+    def open_project(self):
+        from tkinter import filedialog
+        path = filedialog.askopenfilename(parent=self.root,
+            filetypes=[('Schematic project', '*.ccproj.json'), ('JSON files', '*.json')])
+        if not path or not self._discard():
+            return
+        try:
+            project = load_project(path)
+            self._reset_document(project.schematic, project.view, path)
+            self.status.set('Project opened with its junction layout, wires and view.')
+        except (ValueError, TypeError, OSError) as error:
+            self._error(error)
+
+    def _save_project_to(self, path, *, replace_current=False):
+        from tkinter import messagebox
+        try:
+            project = self._snapshot()
+            try:
+                write_project(project, path, overwrite=replace_current)
+            except FileExistsError:
+                if not messagebox.askyesno('Replace project file?',
+                    'Replace the selected schematic project file?', parent=self.root):
+                    return False
+                write_project(project, path, overwrite=True)
+            self.project_path = Path(path).resolve()
+            self._clean_project = project
+            self._update_dirty()
+            self.status.set('Project saved, including layout, wires, metadata and view.')
+            return True
+        except (ValueError, TypeError, OSError) as error:
+            self._error(error)
+            return False
+
+    def save_project(self):
+        if self.project_path is None:
+            return self.save_project_as()
+        return self._save_project_to(self.project_path, replace_current=True)
+
+    def save_project_as(self):
+        from tkinter import filedialog
+        path = filedialog.asksaveasfilename(parent=self.root, defaultextension='.ccproj.json',
+            filetypes=[('Schematic project', '*.ccproj.json')], confirmoverwrite=False)
+        return self._save_project_to(path) if path else False
 
     def export(self):
         from tkinter import filedialog, messagebox
@@ -441,11 +542,11 @@ class CircuitEditor:
             self.root.destroy()
 
 
-def launch(state=None):
+def launch(state=None, *, project=None, path=None):
     import tkinter as tk
     try:
         root = tk.Tk()
     except tk.TclError as error:
         raise ValueError('Cannot initialize a Tk display; run the GUI in a desktop session with Tcl/Tk installed') from error
-    CircuitEditor(root, state)
+    CircuitEditor(root, state, project=project, project_path=path)
     root.mainloop()

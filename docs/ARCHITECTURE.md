@@ -18,7 +18,16 @@ resolution and revision-scoped undo/results. `gui.py` renders that state with Tk
 and invokes the existing DC solver on a worker thread. The UI thread alone
 updates widgets, and results are accepted only for the submitted revision.
 Native electrical export compiles wires into nets; graphical persistence is a
-separate future schema. See GUI_DESIGN.md for exact junction/crossing semantics.
+separate version-1 schema in project_io.py. It embeds the original uncompiled
+CircuitDocument, junction positions, individual wires and a ViewState.
+_document_io.py shares bounded JSON and atomic-file primitives between both file
+formats. Circuit I/O exposes validated data adapters for embedding without
+relaxing its existing schema. See SCHEMATIC_FORMAT.md and GUI_DESIGN.md.
+
+Opening a project/new/import resets history while incrementing the existing
+monotonic revision. Dirty state compares graph and view against the last clean
+snapshot, independently of simulation results. Camera-only changes preserve
+results; document boundaries clear them and reject old pending completions.
 
 Packaging declares the application package and installed compatibility modules
 explicitly. Canonical imports use circuit_calculator; compat/ aliases retain

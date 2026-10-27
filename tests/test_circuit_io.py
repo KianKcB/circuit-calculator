@@ -232,14 +232,14 @@ class FileTests(unittest.TestCase):
 
     def test_failed_replace_preserves_existing_file_and_cleans_temporary(self):
         self.path.write_bytes(b'original content')
-        with patch('circuit_calculator.circuit_io.os.replace', side_effect=PermissionError('simulated failure')):
+        with patch('circuit_calculator._document_io.os.replace', side_effect=PermissionError('simulated failure')):
             with self.assertRaises(PermissionError):
                 save_document(example(), self.path, overwrite=True)
         self.assertEqual(self.path.read_bytes(), b'original content')
         self.assertEqual(list(self.directory.iterdir()), [self.path])
 
     def test_write_failure_cleans_temporary(self):
-        with patch('circuit_calculator.circuit_io.os.fsync', side_effect=OSError('simulated disk failure')):
+        with patch('circuit_calculator._document_io.os.fsync', side_effect=OSError('simulated disk failure')):
             with self.assertRaises(OSError):
                 save_document(example(), self.path)
         self.assertEqual(list(self.directory.iterdir()), [])

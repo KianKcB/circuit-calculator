@@ -3,6 +3,8 @@
 from dataclasses import FrozenInstanceError
 import importlib.util
 import io
+from pathlib import Path
+import tempfile
 from contextlib import redirect_stderr, redirect_stdout
 import unittest
 from unittest.mock import patch
@@ -130,6 +132,18 @@ class SchematicTests(unittest.TestCase):
 
 
 class EditorSessionTests(unittest.TestCase):
+    def test_document_reset_is_a_revision_boundary_even_for_identical_state(self):
+        session = EditorSession(divider_example())
+        session.apply(session.state.change_value('R1', 2000))
+        revision = session.revision
+        state = session.state
+        session.reset(state)
+        self.assertGreater(session.revision, revision)
+        self.assertFalse(session.accept_result(revision, object()))
+        session.undo()
+        self.assertEqual(session.state, state)
+        session.redo()
+        self.assertEqual(session.state, state)
     def test_undo_redo_restores_deleted_topology_and_clears_results(self):
         original = divider_example()
         session = EditorSession(original)
@@ -173,6 +187,27 @@ class EditorSessionTests(unittest.TestCase):
 
 
 class GUICommandTests(unittest.TestCase):
+    def test_gui_project_path_loads_before_lazy_launcher(self):
+        from circuit_calculator.cli import main
+        from circuit_calculator.project_io import SchematicProject, save_project
+        scratch = Path(__file__).resolve().parent / '.build-check'
+        scratch.mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=scratch) as folder:
+            path = Path(folder) / 'example.ccproj.json'
+            project = SchematicProject(divider_example())
+            save_project(project, path)
+            with patch('circuit_calculator.gui.launch') as launch:
+                self.assertEqual(main(['gui', str(path)]), 0)
+            self.assertEqual(launch.call_args.kwargs, {'project': project, 'path': str(path)})
+
+    def test_gui_project_errors_do_not_launch_window(self):
+        from circuit_calculator.cli import main
+        with patch('circuit_calculator.gui.launch') as launch, redirect_stderr(io.StringIO()):
+            self.assertEqual(main(['gui', 'missing-project-file.ccproj.json']), 1)
+            launch.assert_not_called()
+        with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as error:
+            main(['gui', 'project.ccproj.json', '--example'])
+        self.assertEqual(error.exception.code, 2)
     def test_gui_command_passes_example_to_lazy_launcher_without_importing_tk(self):
         from circuit_calculator.cli import main
         with patch('circuit_calculator.gui.launch') as launch:

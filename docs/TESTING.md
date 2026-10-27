@@ -40,14 +40,19 @@ are not available until the workflow has actually been committed/pushed and run.
 - Persistence suite: every element's round trip, normalized deterministic output,
   metadata/Unicode, malformed and duplicate fields, numeric/type/range failures,
   byte/depth/count limits, no-clobber/atomic replacement and failed-write cleanup.
+- Project suite: exact uncompiled graph/layout/wire/metadata/view round trips,
+  strict format/version/schema/numeric/resource failures, atomic preservation,
+  native-format distinction and project-to-DC physical equivalence.
 - DC command suite: preserved interactive menu, known-answer native-file JSON,
   bad arguments/files/topology, missing NumPy advice and pre-solve size guard.
 - Editor logic suite: coordinates/crossings never connect, explicit wire
   merge/split/cycles, source orientation, delete/undo/redo, bounded history,
   revision-scoped result acceptance and analytical compiled-circuit results.
 - Opt-in Tk checks: `python -B scripts/check_gui.py -v` in a display session with
-  NumPy. Nine tests exercise canvas hit targets/movement, creation/edit errors,
-  reference/delete/undo, async success/failure/stale results, zoom and export/open.
+  NumPy. Eighteen tests exercise canvas hit targets/movement, creation/edit errors,
+  reference/delete/undo, async success/failure/stale results, zoom and export/open,
+  graphical save/reopen/view state, cancellation, failed saves/loads, dirty-state
+  restoration and stale completion across document boundaries.
 - DC assembly: explicit hand-written MNA matrix and RHS; topology errors.
 - DC solution: hand-derived divider, parallel, supernode, balanced/unbalanced
   bridges and multiple-source results. KCL at reference and other nodes,
@@ -68,6 +73,17 @@ Expected reference answers are derived independently and must not be changed to
 accommodate an implementation error.
 
 ## Latest local run: 2026-10-27
+
+GUI-2: 185 headless tests passed on Python 3.11.9 and 3.14.6; without site-packages,
+168 passed with 17 expected optional-NumPy skips. All 18 Tk workflow tests passed
+on each interpreter, including project round trips, cancel/error preservation,
+saved-state Undo, camera-only changes and stale results after a document reset.
+Existing circuit-format tests passed after extracting shared JSON/file primitives.
+The new project-to-DC example retains its analytical 8 V / -0.048 W result.
+Fresh installed checks on both interpreters passed 168 tests with 17 expected
+skips without NumPy, then all 185 with NumPy 2.4.6. Project API round trips,
+legacy/canonical commands and module identity, pip dependency checks and editable
+source imports passed. Tk workflows remain explicit local display tests.
 
 REORG-1: all 162 existing tests and nine Tk workflow checks passed on Python
 3.11.9 and 3.14.6 after moving code/tests into folders. Core-only checks passed

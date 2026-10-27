@@ -1,0 +1,80 @@
+{
+  "document": {
+    "circuit": {
+      "elements": [
+        {
+          "minus_node": "g",
+          "name": "V1",
+          "plus_node": "in",
+          "type": "voltage_source",
+          "voltage_volts": 12.0
+        },
+        {
+          "name": "R1",
+          "node_a": "in",
+          "node_b": "out",
+          "resistance_ohms": 1000.0,
+          "type": "resistor"
+        },
+        {
+          "name": "R2",
+          "node_a": "out",
+          "node_b": "return",
+          "resistance_ohms": 2000.0,
+          "type": "resistor"
+        }
+      ],
+      "nodes": [
+        "g",
+        "in",
+        "out",
+        "return"
+      ],
+      "reference_node": "g"
+    },
+    "format": "circuit-calculator",
+    "metadata": {
+      "description": "",
+      "title": "12 V divider"
+    },
+    "version": 1
+  },
+  "format": "circuit-calculator-project",
+  "layout": {
+    "positions": [
+      {
+        "node": "g",
+        "x": 160.0,
+        "y": 420.0
+      },
+      {
+        "node": "in",
+        "x": 160.0,
+        "y": 160.0
+      },
+      {
+        "node": "out",
+        "x": 500.0,
+        "y": 160.0
+      },
+      {
+        "node": "return",
+        "x": 500.0,
+        "y": 420.0
+      }
+    ],
+    "wires": [
+      {
+        "first": "return",
+        "name": "W1",
+        "second": "g"
+      }
+    ]
+  },
+  "version": 1,
+  "view": {
+    "scroll_x": 0.0,
+    "scroll_y": 0.0,
+    "zoom": 1.0
+  }
+}

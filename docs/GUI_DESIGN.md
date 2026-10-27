@@ -59,15 +59,16 @@ cannot replace current results. This is responsiveness for small supported DC
 networks, not cancellation of arbitrary long numerical jobs.
 
 Native v1 circuit files preserve electrical connectivity and metadata only.
-Export resolves wires into nets; reopening arranges junctions automatically.
-Wire segmentation, coordinates, view, history and selection are NOT saved by that
-format. The UI must state this before export. Full schematic-project persistence
-is the next dependency, with a separate versioned layout schema; do not extend
-the strict native circuit schema silently.
+Export resolves wires into nets; importing one arranges junctions automatically.
+GUI-2 now adds a separate project v1 format that preserves original junctions,
+coordinates, individual wires, metadata, zoom and pan. History, tool/selection and
+simulation results are not saved. Open/Save Project and Import/Export Circuit are
+distinct controls. See SCHEMATIC_FORMAT.md for strict schema/save semantics.
 
 This is a junction-based prototype. Free component placement/rotation,
-multi-segment wire routing, automatic segment splitting, graphical-project saves,
+multi-segment wire routing, automatic segment splitting,
 copy/paste and the complete phase-6 workflow remain planned. Do not mark phase 6
 complete. Tests must cover topology independent of geometry, net merge/split,
 orientation, delete/undo, stale-result rejection, analytical export/load/solve
-equivalence, Tk widget workflows and installed distribution imports.
+equivalence, Tk widget workflows and installed distribution imports. Graphical
+project round trips and canceled/failed file workflows are verified in GUI-2.

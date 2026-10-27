@@ -2,7 +2,9 @@
 
 Status: version-1 contract implemented by PERSIST-1, 2026-10-27. This is an electrical
 document format; schematic coordinates, cached solutions and external references
-are excluded. No circuit file content is executed or fetched.
+are excluded. No circuit file content is executed or fetched. Graphical projects
+use the separate schema in SCHEMATIC_FORMAT.md and embed an uncompiled copy of
+this electrical document; this native v1 schema is unchanged.
 
 ## Schema
 
@@ -59,6 +61,10 @@ separate from the domain model. `dumps_document` / `loads_document` handle text;
 document raise `CircuitFormatError(ValueError)` with field context. Ordinary
 filesystem errors remain OSError subclasses. No schema migration is implied:
 unsupported versions require a future explicit migrator, never best-effort loading.
+
+`document_to_data` / `document_from_data` provide owned JSON-compatible data and
+schema/model validation for embedding inside graphical projects. Byte/depth
+budgets apply to the text/file APIs; these adapters operate on existing objects.
 
 Output is deterministic: sorted object keys, two-space indentation, Unicode
 characters, a trailing newline, and preserved array ordering. Repeated load/dump

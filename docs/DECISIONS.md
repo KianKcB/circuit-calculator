@@ -1,5 +1,32 @@
 # Decisions
 
+## 2026-10-27: GUI-2 schematic-project persistence
+
+SCHEMATIC_FORMAT.md records the format/design contract. Embed original junction
+identities and uncompiled component endpoints rather than a second resolved net
+list; this preserves editable wires and avoids two competing connectivity truths.
+Reuse native CircuitDocument validation through explicit data adapters. Extract
+the common bounded JSON/atomic-file primitives to _document_io.py now that two
+formats need them; retain native exceptions, limits and public file APIs.
+
+Keep camera state in a frozen ViewState alongside Schematic, not in Circuit or
+solver results. Persist bounded zoom and leading scroll fractions; different
+viewport sizes may clamp pan. Never serialize undo history or simulation caches.
+Use a monotonic EditorSession.reset boundary so pending results cannot become
+valid merely because a new document starts at a reused revision.
+
+Use clean graph+view snapshots for dirty state and Save / Discard / Cancel for
+document changes/close. Save As uses no-clobber creation plus explicit replacement
+approval; Save reuses the associated project path. Failed/canceled saves do not
+clear dirty state, exporting a circuit is not a project save, and failed loads
+never partially replace current state. Split file/edit toolbar rows to keep the
+additional actions visible. Package version 0.4.0; native/project versions each 1.
+
+Validation includes strict project failures, native regression suite after shared
+helper extraction, exact graph/view round trips, physical DC equivalence, GUI
+failure/cancellation/stale-result workflows, and installed package compatibility.
+No new dependencies, devices, solver mathematics or routing behavior are added.
+
 ## 2026-10-27: REORG-1 group files by responsibility
 
 The flat layout now mixes seven application modules, seven test modules, eight

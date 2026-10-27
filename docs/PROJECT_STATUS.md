@@ -1,12 +1,11 @@
 # Project status and continuation
 
-Date: 2026-10-27. PERSIST-1 and GUI-1 were committed by the user as `c4a13dd`.
-REORG-1 began with a clean working tree. The current reorganization is local and
-uncommitted; no staging, commits, pushes or branch changes were performed by the
-agent. Current implementation paths are under circuit_calculator/, tests under
-tests/, technical docs here in docs/, and dependency inputs in requirements/.
-Historical batch entries below retain filenames/commands from their original
-snapshots; use README and DEVELOPMENT.md for current commands.
+Date: 2026-10-27. REORG-1 was committed as `992fbac`; GUI-2 began with a
+clean working tree. Current GUI-2 changes are local and uncommitted; no staging,
+commit, push or branch operation was performed. Package version is now 0.4.0;
+electrical document v1 and the new schematic-project v1 are separate formats.
+Use README and DEVELOPMENT.md for current package paths/commands; historical
+batch entries below retain their original snapshot names and results.
 
 ## Initial audit
 
@@ -357,14 +356,68 @@ checkout now require installation or migration to the qualified package names.
 No changes to running GUI sessions or user documents were requested/performed.
 Hosted CI is configured but was not inspected/run from this session.
 
+## Batch GUI-2: schematic-project persistence and safe file workflow
+
+Status: source/project/Tk and fresh wheel/editable validation VERIFIED locally.
+Base `992fbac`, initially clean; no unrelated modifications. No dependencies added.
+
+- project_io.py defines immutable ViewState/SchematicProject and strict version-1
+  project JSON. It stores original CircuitDocument identities/endpoints, metadata,
+  positions, individual wires and bounded zoom/pan. Saving never compiles wires,
+  so unfinished or temporarily unsolvable editor states remain editable.
+- _document_io.py extracts bounded UTF-8/JSON/duplicate-key/numeric parsing and
+  atomic file primitives shared by electrical and graphical formats. Native
+  circuit I/O exposes owned validated data adapters for embedding. Existing native
+  schema, public file functions and exception behavior remain covered by tests.
+- GUI adds Open Project, Save Project, Save As, and an associated path. Two toolbar
+  rows keep file/edit actions visible. Electrical Import/Export remain distinct.
+  Dirty state compares graph and camera to the clean snapshot. Save clears it
+  only on success; exporting a circuit does not save graphical work. Undo back
+  to the clean state clears dirty, while camera-only edits retain valid results.
+- Save / Discard / Cancel protects document changes and close. Canceled file
+  dialogs, declined replacements and write failures preserve unsaved state.
+  Failed project load preserves graph/view/results. Document reset clears history
+  and increments the same monotonic revision, rejecting pending old results even
+  for an identical graph.
+- GUI command accepts a project path, validated before launching Tk. It rejects
+  combining a path with --example. examples/divider.ccproj.json demonstrates
+  preserved graph/layout/wire state; examples/divider.json remains electrical-only.
+- 20 project tests, one session-boundary test and two command tests bring the
+  headless suite to 185. Tk checks expand from nine to 18, covering project
+  save/reopen/view restoration, cancellation, file preservation, dirty/Undo state,
+  electrical export, failed loads and old results across document boundaries.
+- Format, architecture, user/developer documentation and roadmap updated in docs/.
+
+Executed on Windows: `python -B -m unittest -q` and `py -3.14 -B -m unittest -q`
+passed **185 tests** each. Without site-packages: **168 passed, 17 expected skips**.
+Both Python 3.11.9 and 3.14.6 passed **18 Tk workflow tests**. The analytical
+project save/load/compile/solve round trip preserves out=8 V and source power
+-0.048 W. Native circuit regressions pass after shared-helper extraction.
+Syntax and local Markdown link checks passed. Fresh package checks on Python
+3.11.9 and 3.14.6 each passed **168 tests with 17 expected skips** in core-only
+mode and **185 with no skips** under NumPy 2.4.6. Both passed pip check, canonical
+and legacy command/import identity, installed project save/load, and editable
+source imports outside the checkout. Commands were `python -B
+scripts/check_distributions.py` and the `py -3.14` equivalent. An isolated build
+produced the 0.4.0 wheel from its source archive. No hosted CI result is claimed.
+
+Limits: existing junction-based R/V/I editor and straight wires; free component
+placement/rotation and terminal-level routing are still planned. Project v1 does
+not persist results, Undo/Redo history, selection or active tool. Tk pan fractions
+may quantize/clamp with pixel/viewport sizes; no exact screen-pixel restoration
+across different window sizes is promised. Shared atomic saves retain hard-link
+requirements and directory-fsync durability limits. No hosted GUI/CI run, macOS
+GUI check, project-version migration or backend change is claimed.
+
 ## Exact next action
 
-Review this organizational refactor. Git will show moved files as deletions plus
-new paths until staging/rename detection. Suggested commit message:
-`Organize application, tests, docs and dependency files into folders`.
+Review GUI-2 as a coherent commit candidate. Suggested commit message:
+`Add schematic project save and reopen workflows`.
 The user handles staging/commits/pushes; the index has not been changed.
 
-Next feature batch remains versioned schematic-project persistence, independent
-of native electrical v1 files: preserve coordinates, explicit wires and view state
-with strict validation, atomic saves and round-trip tests. Add new application
-code under circuit_calculator/ and new regression tests under tests/.
+Next batch: specify and implement component-centric placement/rotation and
+explicit terminal-level wire connections. Preserve native electrical v1 and
+existing project-v1 loading; if the graphical schema must evolve, define a
+version/migration policy before writing it. Extend connectivity/Undo/GUI tests
+and add a display-enabled CI lane when practical. The full phase-6 editor is
+still in progress; do not treat graphical persistence alone as completion.

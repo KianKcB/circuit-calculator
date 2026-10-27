@@ -44,7 +44,8 @@ environment = Path(sys.prefix).resolve()
 for name in ('circuit_calculator', 'circuit_calculator.calculations',
              'circuit_calculator.circuit', 'circuit_calculator.circuit_io',
              'circuit_calculator.dc', 'circuit_calculator.cli',
-             'circuit_calculator.schematic', 'circuit_calculator.gui'):
+             'circuit_calculator.schematic', 'circuit_calculator.gui',
+             'circuit_calculator.project_io', 'circuit_calculator._document_io'):
     spec = importlib.util.find_spec(name)
     if spec is None or not Path(spec.origin).resolve().is_relative_to(environment):
         raise RuntimeError('Module did not come from installed environment: ' + name)
@@ -70,6 +71,13 @@ for argv in ([str(command)], [sys.executable, '-I', '-m', 'main'],
 from circuit_calculator.circuit import Circuit, Resistor, VoltageSource
 from circuit_calculator.dc import solve_dc
 from circuit_calculator.circuit_io import CircuitDocument, save_document, load_document
+from circuit_calculator.project_io import SchematicProject, ViewState, save_project, load_project
+from circuit_calculator.schematic import divider_example
+project = SchematicProject(divider_example(), ViewState(1.25, .2, .3))
+project_path = folder / 'installed-example.ccproj.json'
+save_project(project, project_path)
+if load_project(project_path) != project:
+    raise RuntimeError('Installed project persistence round trip failed')
 # Installed legacy modules are aliases, not duplicate copies of domain classes.
 import importlib
 for old, new in (('calculations', 'calculations'), ('circuit', 'circuit'),
