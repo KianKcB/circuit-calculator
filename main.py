@@ -1,6 +1,7 @@
 """Interactive command-line interface for circuit calculations."""
 
 import sys
+from decimal import Decimal
 
 from calculations import (
     calculate_current_divider,
@@ -12,6 +13,17 @@ from calculations import (
 )
 
 
+def _parse_number(entry, description="number"):
+    """Parse CLI text without silently turning a nonzero value into zero."""
+    try:
+        value = float(entry)
+    except ValueError as error:
+        raise ValueError(f"'{entry}' is not a valid {description}") from error
+    if value == 0 and Decimal(entry) != 0:
+        raise ValueError(f"'{entry}' is too small to represent as a nonzero number")
+    return value
+
+
 def _read_resistances(input_fn, output_fn):
     output_fn("Enter one resistance in ohms (Ω) per line. Press Enter on a blank line when done.")
     resistances = []
@@ -19,18 +31,12 @@ def _read_resistances(input_fn, output_fn):
         entry = input_fn("Resistance (Ω): ").strip()
         if not entry:
             return resistances
-        try:
-            resistances.append(float(entry))
-        except ValueError as error:
-            raise ValueError(f"'{entry}' is not a valid number") from error
+        resistances.append(_parse_number(entry))
 
 
 def _read_number(input_fn, label, unit):
     entry = input_fn(f"Enter {label} ({unit}): ").strip()
-    try:
-        return float(entry)
-    except ValueError as error:
-        raise ValueError(f"'{entry}' is not a valid number for {label}") from error
+    return _parse_number(entry, f"number for {label}")
 
 
 def _read_one_based_selection(input_fn, item_name, item_count):

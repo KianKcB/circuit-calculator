@@ -7,7 +7,7 @@ direction; research items require a separate feasibility decision.
 | Phase | Status | Scope, dependency and acceptance gate |
 | --- | --- | --- |
 | 0 Audit | VERIFIED | All six source/document/test files plus ignore rules and Git state inspected; 59 baseline tests passed; findings in PROJECT_STATUS.md. |
-| 1 Foundation | IN PROGRESS | Preserve CLI/core split; documentation and optional dependency declared. Next: repair legacy numerical defects with compatibility tests. Packaging, CI and version matrix remain planned. |
+| 1 Foundation | IN PROGRESS | CLI/core split preserved; documentation and optional dependency declared. NUM-1 numerical repairs verified with native-type compatibility and CLI range tests. Packaging, CI and version matrix remain planned. |
 | 2 Circuit model | VERIFIED for current DC subset | Immutable nodes and R/V/I components, explicit orientation and declared reference. Solver adds topology checks. Persistence, hierarchy and multi-terminal components remain planned. |
 | 3 Linear DC | VERIFIED for documented small-network subset | MNA, node voltages, all branch currents/power, topology and numerical diagnostics. Analytical examples and conservation tests required. No claim of arbitrary-range or large-network reliability. |
 | 4 Advanced DC | NOT STARTED | Controlled sources, wires/zero-ohm contraction, equivalent ports, superposition, floating-subnetwork policy and broader conditioning study; depend on phase 3. Each needs independent references and uniqueness tests. |
@@ -28,12 +28,13 @@ direction; research items require a separate feasibility decision.
 
 ## Next reviewable batches
 
-1. Repair standalone numerical calculations: reproduce overflow/underflow and
-   mixed numeric behavior, define compatibility policy, implement regression fixes.
-2. Strengthen installation/CI reproducibility and test the declared Python range.
-3. Native versioned JSON persistence plus a programmatic DC example/CLI workflow;
+1. Strengthen installation/CI reproducibility and test the declared Python range.
+2. Native versioned JSON persistence plus a programmatic DC example/CLI workflow;
    round-trip and malformed-input tests before GUI work.
-4. Decide GUI framework, then build the first supported DC editing vertical slice.
+3. Decide GUI framework, then build the first supported DC editing vertical slice.
+
+NUM-1 is complete locally: all six original numerical reproducers are covered by
+regressions, plus CLI underflow parsing. Review/commit remains the user's action.
 
 Advanced DC can proceed independently where a concrete user circuit needs it.
 Do not require all controlled devices or semiconductor models before a useful GUI.

@@ -2,7 +2,8 @@
 
 from collections.abc import Iterable
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import Decimal, DecimalException
+from fractions import Fraction
 from numbers import Integral, Number, Rational
 import math
 
@@ -22,6 +23,8 @@ def series_resistance(resistances):
 
     Values must be real numeric values that are finite and non-negative.
     Booleans are rejected even though ``bool`` is a subclass of ``int``.
+    Rational-only and Decimal/integer inputs retain native arithmetic; other
+    mixtures use floats. Non-finite totals and underflow to zero are errors.
     """
     if isinstance(resistances, (str, bytes)) or not isinstance(resistances, Iterable):
         raise TypeError("resistances must be a non-empty iterable of numeric values")
@@ -31,56 +34,47 @@ def series_resistance(resistances):
         raise ValueError("resistances must not be empty")
 
     for index, value in enumerate(values):
-        if isinstance(value, bool) or not (isinstance(value, Number) or isinstance(value, Decimal)):
-            raise TypeError(f"resistance at index {index} must be a real numeric value")
-        if isinstance(value, complex):
-            raise TypeError(f"resistance at index {index} must be a real numeric value")
-        try:
-            finite = math.isfinite(value)
-        except (TypeError, ValueError, OverflowError):
-            finite = False
-        if not finite:
-            raise ValueError(f"resistance at index {index} must be finite")
+        _validate_finite_real(value, f"resistance at index {index}")
         if value < 0:
             raise ValueError(f"resistance at index {index} must be non-negative")
 
-    return sum(values)
+    # Preserve native sums where their arithmetic is compatible. Decimal mixed
+    # with floats or Fractions follows the same float policy as other formulas.
+    native = (all(isinstance(value, Rational) for value in values)
+              or all(isinstance(value, (Decimal, Integral)) for value in values))
+    try:
+        if native:
+            result = sum(values)
+        else:
+            result = math.fsum(_finite_real_float(value, f"resistance at index {index}")
+                               for index, value in enumerate(values))
+    except (OverflowError, DecimalException) as error:
+        raise ValueError("total series resistance must be finite within the numeric context") from error
+    _validate_finite_real(result, "total series resistance")
+    if result == 0 and any(value != 0 for value in values):
+        raise ValueError("total series resistance must be representable as a nonzero number")
+    return result
 
 
 def parallel_resistance(resistances):
     """Return equivalent resistance and short-circuit status for parallel branches.
 
-    Values follow the same validation rules as :func:`series_resistance`.
+    Values must be finite, non-negative reals representable as floats without
+    losing a nonzero value to zero. A positive equivalent must remain nonzero.
     A zero-ohm branch short-circuits the parallel network, so the equivalent
     resistance is zero and ``has_short_circuit`` is true.
     """
-    if isinstance(resistances, (str, bytes)) or not isinstance(resistances, Iterable):
-        raise TypeError("resistances must be a non-empty iterable of numeric values")
-
-    values = list(resistances)
-    if not values:
-        raise ValueError("resistances must not be empty")
-
-    for index, value in enumerate(values):
-        if isinstance(value, bool) or not (isinstance(value, Number) or isinstance(value, Decimal)):
-            raise TypeError(f"resistance at index {index} must be a real numeric value")
-        if isinstance(value, complex):
-            raise TypeError(f"resistance at index {index} must be a real numeric value")
-        try:
-            finite = math.isfinite(value)
-        except (TypeError, ValueError, OverflowError):
-            finite = False
-        if not finite:
-            raise ValueError(f"resistance at index {index} must be finite")
-        if value < 0:
-            raise ValueError(f"resistance at index {index} must be non-negative")
-
-    has_short_circuit = any(value == 0 for value in values)
-    if has_short_circuit:
+    values = _validated_resistances(resistances)
+    if any(value == 0 for value in values):
         return ParallelResistanceResult(0.0, True)
 
-    reciprocal_sum = math.fsum(1.0 / float(value) for value in values)
-    return ParallelResistanceResult(1.0 / reciprocal_sum, False)
+    smallest = min(values)
+    # At least one weight is 1; reciprocals never need to be represented.
+    total_weight = math.fsum(smallest / value for value in values)
+    equivalent = smallest / total_weight
+    if equivalent == 0:
+        raise ValueError("equivalent resistance must be representable as a nonzero number")
+    return ParallelResistanceResult(equivalent, False)
 
 
 def calculate_ohms_law(*, voltage=_UNSET, current=_UNSET, resistance=_UNSET, solve_for):
@@ -89,6 +83,7 @@ def calculate_ohms_law(*, voltage=_UNSET, current=_UNSET, resistance=_UNSET, sol
     ``solve_for`` must be ``"voltage"``, ``"current"``, or ``"resistance"``.
     Supply exactly the other two values. Voltage and current may be signed;
     resistance must be non-negative. Values must be finite real numbers.
+    Float conversion and results reject overflow and nonzero underflow to zero.
     """
     variables = {
         "voltage": voltage,
@@ -102,23 +97,7 @@ def calculate_ohms_law(*, voltage=_UNSET, current=_UNSET, resistance=_UNSET, sol
     if solve_for in supplied or len(supplied) != 2:
         raise ValueError("provide exactly two values, leaving solve_for unset")
 
-    for name in supplied:
-        value = variables[name]
-        if isinstance(value, bool) or not (isinstance(value, Number) or isinstance(value, Decimal)):
-            raise TypeError(f"{name} must be a real numeric value")
-        if isinstance(value, complex):
-            raise TypeError(f"{name} must be a real numeric value")
-        try:
-            finite = math.isfinite(value)
-        except (TypeError, ValueError, OverflowError):
-            finite = False
-        if not finite:
-            raise ValueError(f"{name} must be finite")
-        if name == "resistance" and value < 0:
-            raise ValueError("resistance must be non-negative")
-
-    # Convert to float so mixed int, float, and Decimal inputs can be combined.
-    known = {name: float(variables[name]) for name in supplied}
+    known = _validated_known_values(variables, supplied)
     if solve_for == "voltage":
         result = known["current"] * known["resistance"]
     elif solve_for == "current":
@@ -134,6 +113,10 @@ def calculate_ohms_law(*, voltage=_UNSET, current=_UNSET, resistance=_UNSET, sol
 
     if not math.isfinite(result):
         raise ValueError(f"calculated {solve_for} must be finite")
+    # With valid nonzero denominators, a nonzero result is expected exactly
+    # when both supplied operands are nonzero.
+    if result == 0 and all(value != 0 for value in known.values()):
+        raise ValueError(f"calculated {solve_for} must be representable as a nonzero number")
     return result
 
 
@@ -144,6 +127,8 @@ def calculate_power(*, voltage=_UNSET, current=_UNSET, resistance=_UNSET):
     two finite real values. Voltage and current may be signed; resistance must
     be non-negative. Power calculated from voltage and zero resistance is
     undefined and raises ``ValueError``.
+    Inputs normalize to floats; exact intermediate arithmetic avoids premature
+    square overflow/underflow. Unrepresentable final results raise ValueError.
     """
     variables = {
         "voltage": voltage,
@@ -154,38 +139,34 @@ def calculate_power(*, voltage=_UNSET, current=_UNSET, resistance=_UNSET):
     if len(supplied) != 2:
         raise ValueError("provide exactly two of voltage, current, and resistance")
 
-    for name in supplied:
-        value = variables[name]
-        if isinstance(value, bool) or not (isinstance(value, Number) or isinstance(value, Decimal)):
-            raise TypeError(f"{name} must be a real numeric value")
-        if isinstance(value, complex):
-            raise TypeError(f"{name} must be a real numeric value")
-        try:
-            finite = math.isfinite(value)
-        except (TypeError, ValueError, OverflowError):
-            finite = False
-        if not finite:
-            raise ValueError(f"{name} must be finite")
-        if name == "resistance" and value < 0:
-            raise ValueError("resistance must be non-negative")
-
-    known = {name: float(variables[name]) for name in supplied}
-    if "voltage" in known and "current" in known:
-        power = known["voltage"] * known["current"]
-    elif "current" in known and "resistance" in known:
-        power = known["current"] ** 2 * known["resistance"]
+    known = _validated_known_values(variables, supplied)
+    # Exact arithmetic on at most three normalized float operands avoids
+    # intermediate square overflow/underflow; round only the final result.
+    exact = {name: Fraction(value) for name, value in known.items()}
+    if "voltage" in exact and "current" in exact:
+        power = exact["voltage"] * exact["current"]
+    elif "current" in exact and "resistance" in exact:
+        power = exact["current"] ** 2 * exact["resistance"]
     else:
-        if known["resistance"] == 0:
+        if exact["resistance"] == 0:
             raise ValueError("power is undefined when resistance is zero")
-        power = known["voltage"] ** 2 / known["resistance"]
-
-    if not math.isfinite(power):
-        raise ValueError("calculated power must be finite")
-    return power
+        power = exact["voltage"] ** 2 / exact["resistance"]
+    return _finite_real_float(power, "calculated power")
 
 
-def _finite_real_float(value, name):
-    """Validate a finite real numeric value and convert it to a usable float."""
+def _validated_known_values(variables, supplied):
+    """Normalize supplied V/I/R operands with a consistent resistance domain."""
+    known = {}
+    for name, value in variables.items():
+        if name in supplied:
+            known[name] = _finite_real_float(value, name)
+            if name == "resistance" and known[name] < 0:
+                raise ValueError("resistance must be non-negative")
+    return known
+
+
+def _validate_finite_real(value, name):
+    """Check numeric type and finiteness without narrowing native numeric range."""
     if isinstance(value, bool) or not (isinstance(value, Number) or isinstance(value, Decimal)):
         raise TypeError(f"{name} must be a real numeric value")
     if isinstance(value, complex):
@@ -202,6 +183,10 @@ def _finite_real_float(value, name):
     if not finite:
         raise ValueError(f"{name} must be finite")
 
+
+def _finite_real_float(value, name):
+    """Validate a finite real numeric value and convert it to a usable float."""
+    _validate_finite_real(value, name)
     try:
         converted = float(value)
     except (OverflowError, ValueError) as error:

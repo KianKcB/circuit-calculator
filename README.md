@@ -22,6 +22,7 @@ A small Python command-line tool for calculating equivalent resistance in series
 | `dc.py` | Linear DC MNA assembly, solving, results and diagnostics. |
 | `test_dc.py` | Analytical reference circuits and solver failure tests. |
 | `test_calculations.py` | Unit tests for the calculations and CLI behavior. |
+| `test_numerical_calculations.py` | Extreme-value regressions, numeric-type compatibility and independent power references. |
 | `.gitignore` | Excludes Python caches, virtual environments, test caches, and local environment files. |
 
 ## Requirements and setup
@@ -101,6 +102,29 @@ For an ideal parallel network with positive branch resistances, `Ik = Itotal × 
 - A current cannot be calculated when resistance is zero, and resistance cannot be calculated when current is zero. These cases are reported as calculation errors.
 - Invalid menu choices are reported without terminating the program. Choosing exit, or ending input with Ctrl+C or end-of-file, exits cleanly.
 
+### Numeric range and return types
+
+Series sums retain integer/Fraction arithmetic for those inputs, and Decimal
+arithmetic for Decimal/integer mixtures. Decimal sums follow the active Decimal
+context. Other mixtures, including Decimal with float or Fraction, return a
+float. Float sums use accurate summation and reject overflow.
+
+Parallel resistance, Ohm's law and power return float results (parallel wraps
+its value in `ParallelResistanceResult`). They reject nonzero inputs or results
+that round to zero and values outside finite float range with `ValueError`.
+Representable subnormal values remain valid: a `1e-320` ohm branch is not a
+short circuit. CLI text that is too small to survive float conversion is also
+rejected. True zero follows the physical rules above.
+
+Power calculations avoid intermediate squaring overflow/underflow. For example,
+`calculate_power(current=1e200, resistance=1e-200)` returns approximately
+`1e200` watts. Inputs still normalize to floats; this is not arbitrary-precision
+power analysis. Negative power from voltage/current is supported.
+
+Divider policies are unchanged: voltage division rejects an overflowing total
+resistance, while negligible current-divider conductance weights may round to
+zero. Ordinary floating-point rounding still applies to every float result.
+
 ## Run the tests
 
 From the project directory, run:
@@ -114,7 +138,7 @@ python -m unittest -v
 The menu still exposes only standalone formulas. The Python DC API below solves
 small linear networks of positive resistors and independent sources. GUI, file
 loading, controlled/reactive/nonlinear components and unit prefixes are not yet
-implemented. Legacy formula extreme-number limitations are recorded in
+implemented. Numerical policies and remaining limitations are recorded in
 [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
 ## Linear DC analysis from Python

@@ -1,7 +1,9 @@
 # Project status and continuation
 
-Date: 2026-10-27. This is a local review checkpoint; nothing was committed or
-pushed. Always recheck the working tree before continuing.
+Date: 2026-10-27. DC-1 is committed as `2f4bbe9` with the user-provided commit
+message. The working tree was clean at the start of NUM-1. NUM-1 changes below
+are local and uncommitted; no commit or push was performed by the agent.
+Always recheck the working tree before continuing.
 
 ## Initial audit
 
@@ -37,7 +39,7 @@ is justified. Subclasses are accepted by the model but deliberately rejected by
 DC to avoid accidentally simulating unknown device behavior.
 
 Strengths: small modules, pure formulas, immutable data and testable CLI.
-Weaknesses: duplicated validation with differing numeric policies; legacy output
+Baseline weaknesses: duplicated validation with differing numeric policies; legacy output
 overflow/underflow; no reproducible installation or compatibility matrix.
 README omitted the model and described all network solving as future work;
 updated for the new programmatic DC subset. The historical Python 3.7 claim is
@@ -46,9 +48,10 @@ destructive file handling exists in the application. Future parsers must validat
 untrusted input. Current iterable APIs can consume unbounded input; they are not
 safe parsers for arbitrary external data.
 
-### Reproduced legacy defects (still open)
+### Reproduced legacy defects (historical; fixed in NUM-1)
 
-These are baseline findings, not regressions introduced by DC:
+These were baseline findings, not regressions introduced by DC. All six are now
+covered by passing regression tests. The table preserves the original evidence:
 
 | Reproducer | Observed outcome | Required follow-up |
 | --- | --- | --- |
@@ -114,14 +117,48 @@ Final validation after the last source change:
 - Analytical references only; no external SPICE benchmark, fresh installation,
   version matrix or platform matrix has been run.
 
+## Batch NUM-1: standalone numerical reliability
+
+Status: VERIFIED locally, ready for review. Depends on the existing scalar APIs;
+no new dependency. Base commit `2f4bbe9`; no pre-existing uncommitted modifications.
+
+- `calculations.py`: shared finite-value validation, native series type handling,
+  compensated float sums, scaled parallel conductances, Ohm's law range guards,
+  exact intermediate power arithmetic on normalized float operands.
+- `main.py`: shared numeric text parser rejects underflow before a false zero
+  resistance/current/voltage can reach the calculation layer.
+- `test_numerical_calculations.py`: 29 tests, including all six reproducers,
+  Decimal context traps, subnormal preservation, physical identities, independent
+  high-precision power references and complete injected-I/O CLI recovery.
+- README, DECISIONS, ROADMAP, TESTING and this status document synchronized.
+
+Validation: `python -B -m unittest -v`: **110 passed, no skips**.
+`python -B -S -m unittest -q`: **97 passed, 13 solver tests skipped**.
+Focused numerical suite was first run against the unfixed implementation and
+failed as expected; all original 81 tests remain unchanged and pass.
+`git diff --check` passed with only Windows line-ending advisories.
+
+Review: no formula changes to the dividers or DC solver; native series range
+is retained without forcing Decimal/Fraction/integer values through float.
+Mixed Decimal/float and Decimal/Fraction series inputs now deliberately produce
+float results. Nonzero-to-zero conversion/results raise ValueError; finite
+subnormals are accepted. Decimal arithmetic continues to honor the caller's
+context and traps (arithmetic exceptions are reported as ValueError).
+Power may differ in its last bit from separately rounded square/multiply steps;
+it now rounds the exact result of normalized operands once. See DECISIONS.md.
+
+Limits: floating-point rounding and precision loss remain; this is not exact
+real arithmetic. Current-divider negligible-weight underflow and voltage-divider
+total-overflow rejection are unchanged. No cross-version/platform tests,
+installation checks or large-scale benchmarks were added in this batch.
+
 ## Exact next action
 
-Review this coherent DC milestone together with the pre-existing staged model.
-Suggested commit message: `Add validated linear DC MNA analysis and development roadmap`.
+Review NUM-1 as a coherent commit candidate. Suggested commit message:
+`Fix numerical range handling in scalar calculations and CLI input`.
 The user handles staging/commits/pushes.
 
-Next implementation batch: add regressions for the six legacy numerical
-reproducers above, settle mixed-number and underflow policy, repair the standalone
-formulas without breaking ordinary CLI behavior or Decimal-only series sums.
-Then tackle reproducible installation/CI, native persistence and a DC user workflow
-before GUI work. See ROADMAP.md for all long-term phases and acceptance gates.
+Next batch: reproducible installation and a minimal CI workflow, with an explicit
+supported Python-version decision and separate formula-only/full-DC validation.
+Then native persistence and a DC user workflow before GUI work. See ROADMAP.md
+for all long-term phases and acceptance gates.
