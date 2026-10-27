@@ -34,10 +34,31 @@ def main():
 
         run('-m', 'pip', 'install', '--no-deps', wheels[0])
         run('-B', root / 'scripts/verify_install.py')
-        run('-m', 'pip', 'install', '-c', root / 'constraints-ci.txt',
+        run('-m', 'pip', 'install', '-c', root / 'requirements/ci-constraints.txt',
             '--only-binary=:all:', str(wheels[0]) + '[dc]')
         run('-m', 'pip', 'check')
         run('-B', root / 'scripts/verify_install.py', '--dc')
+        # An editable install must work outside the checkout as well; do not use
+        # the wheel verifier's site-packages-origin requirement for source links.
+        run('-m', 'pip', 'install', '--no-deps', '--editable', root)
+        smoke = '''
+import importlib
+from pathlib import Path
+import sys
+import circuit_calculator.circuit as canonical
+if not Path(canonical.__file__).resolve().is_relative_to(Path(sys.argv[1]).resolve()):
+    raise RuntimeError('Editable install did not load source package')
+for old, new in (('calculations', 'calculations'), ('circuit', 'circuit'),
+                 ('circuit_io', 'circuit_io'), ('dc', 'dc'), ('main', 'cli'),
+                 ('gui', 'gui'), ('schematic', 'schematic')):
+    if importlib.import_module(old) is not importlib.import_module('circuit_calculator.' + new):
+        raise RuntimeError('Editable compatibility alias failed: ' + old)
+print('Editable canonical and legacy imports verified outside checkout.')
+'''
+        subprocess.run([str(executable), '-I', '-B', '-c', smoke, str(root)],
+                       cwd=environment, check=True)
+        subprocess.run([str(executable), '-I', '-m', 'circuit_calculator', 'gui', '--help'],
+                       cwd=environment, check=True)
 
 
 if __name__ == '__main__':

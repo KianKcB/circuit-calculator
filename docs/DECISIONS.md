@@ -1,5 +1,34 @@
 # Decisions
 
+## 2026-10-27: REORG-1 group files by responsibility
+
+The flat layout now mixes seven application modules, seven test modules, eight
+technical documents and dependency inputs at the root. Move implementations to
+the `circuit_calculator` package, tests to `tests/`, technical documents to `docs/`
+and dependency inputs to `requirements/`. Keep scripts, examples and CI in their
+existing folders. Avoid speculative subpackages: the current code does not need
+additional layers. This is an organizational refactor, not a solver/GUI change.
+
+Rename implementation main.py to circuit_calculator/cli.py and provide a package
+`__main__` entry point. Preserve the root launcher and installed flat imports via
+tiny aliases in compat/. Aliases share exact module/class identity, avoiding
+duplicate frozen domain types or inconsistent mock/patch targets. New checkout
+imports use the canonical package; flat checkout imports require installation
+(normal or editable). This migration is explicit in README and DEVELOPMENT.md.
+
+Declare package and compatibility-module directories explicitly in setuptools;
+keep base runtime dependencies empty. Update manifest, verification scripts,
+tests, documentation links, dependency paths and CI. Bump local version to 0.3.1
+for the packaging change. Preserve mathematics, validation, native file formats,
+GUI behavior and public function signatures.
+
+Acceptance: existing 162 tests and nine Tk checks, package/root/installed legacy
+launchers, installed module/class alias identity, isolated wheel tests with and
+without NumPy, editable installation, source archive contents, and local Markdown
+links. No Git staging/commit/push operations. Historical batch evidence retains
+original filenames where appropriate. References: [setuptools package layout](https://setuptools.pypa.io/en/latest/userguide/package_discovery.html),
+[unittest discovery](https://docs.python.org/3/library/unittest.html#test-discovery).
+
 ## 2026-10-27: GUI-1 Tk network editor prototype
 
 The detailed framework comparison, references, electrical junction rules,

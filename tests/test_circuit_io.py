@@ -8,8 +8,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from circuit import Circuit, CurrentSource, Resistor, VoltageSource
-from circuit_io import (CircuitDocument, CircuitFormatError, dumps_document,
+from circuit_calculator.circuit import Circuit, CurrentSource, Resistor, VoltageSource
+from circuit_calculator.circuit_io import (CircuitDocument, CircuitFormatError, dumps_document,
                         loads_document, load_document, save_document, MAX_BYTES)
 
 
@@ -173,7 +173,7 @@ class InvalidDocumentTests(unittest.TestCase):
 
     def test_byte_limit_counts_utf8_and_applies_to_output(self):
         text = dumps_document(example())
-        with patch('circuit_io.MAX_BYTES', len(text.encode('utf-8')) - 1):
+        with patch('circuit_calculator.circuit_io.MAX_BYTES', len(text.encode('utf-8')) - 1):
             with self.assertRaisesRegex(CircuitFormatError, 'bytes'):
                 loads_document(text)
             with self.assertRaisesRegex(CircuitFormatError, 'bytes'):
@@ -188,7 +188,7 @@ class InvalidDocumentTests(unittest.TestCase):
 
     def test_node_element_and_string_limits(self):
         for constant, limit in (('MAX_NODES', 2), ('MAX_ELEMENTS', 3), ('MAX_NAME_LENGTH', 2)):
-            with patch('circuit_io.' + constant, limit):
+            with patch('circuit_calculator.circuit_io.' + constant, limit):
                 with self.subTest(constant=constant), self.assertRaises(CircuitFormatError):
                     loads_document(dumps_document(example()))
         for key, limit in (('title', 256), ('description', 4096)):
@@ -232,14 +232,14 @@ class FileTests(unittest.TestCase):
 
     def test_failed_replace_preserves_existing_file_and_cleans_temporary(self):
         self.path.write_bytes(b'original content')
-        with patch('circuit_io.os.replace', side_effect=PermissionError('simulated failure')):
+        with patch('circuit_calculator.circuit_io.os.replace', side_effect=PermissionError('simulated failure')):
             with self.assertRaises(PermissionError):
                 save_document(example(), self.path, overwrite=True)
         self.assertEqual(self.path.read_bytes(), b'original content')
         self.assertEqual(list(self.directory.iterdir()), [self.path])
 
     def test_write_failure_cleans_temporary(self):
-        with patch('circuit_io.os.fsync', side_effect=OSError('simulated disk failure')):
+        with patch('circuit_calculator.circuit_io.os.fsync', side_effect=OSError('simulated disk failure')):
             with self.assertRaises(OSError):
                 save_document(example(), self.path)
         self.assertEqual(list(self.directory.iterdir()), [])
@@ -258,7 +258,7 @@ class FileTests(unittest.TestCase):
 
     @unittest.skipUnless(importlib.util.find_spec('numpy'), 'optional NumPy DC dependency missing')
     def test_construct_save_load_solve_has_same_physical_result(self):
-        from dc import solve_dc
+        from circuit_calculator.dc import solve_dc
         save_document(example(), self.path)
         original = solve_dc(example().circuit)
         restored = solve_dc(load_document(self.path).circuit)

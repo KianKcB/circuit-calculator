@@ -1,15 +1,16 @@
 # Architecture
 
-The local checkout is authoritative. Preserve the flat modules while they remain
-small. `calculations.py` contains standalone formulas; `main.py` owns interactive
-I/O; `circuit.py` owns immutable, validated electrical data. The new `dc.py` owns
-linear DC assembly, topology checks, solution and results. None depends on a GUI.
-Future persistence and schematic layout must be separate clients of the model.
+The local checkout is authoritative. Application implementations live in the
+`circuit_calculator/` package. Its calculations.py contains standalone formulas,
+cli.py owns command/interactive I/O, circuit.py owns immutable electrical data,
+and dc.py owns DC assembly, topology checks, solution and results. The model and
+solver have no GUI dependency. Tests, documentation, requirements, workflow helpers
+and examples are grouped in their corresponding top-level folders.
 
 `circuit_io.py` is now the native persistence client. CircuitDocument owns title
 and description without changing Circuit. Strict version-1 JSON schema, numerical
 conversion rules, limits and save semantics are defined in CIRCUIT_FORMAT.md.
-The DC file command in main.py composes load -> size guard -> solve -> JSON
+The DC file command in cli.py composes load -> size guard -> solve -> JSON
 presentation. Analysis limits do not prevent storing valid unsolvable descriptions.
 
 `schematic.py` now owns immutable layout/junction/wire state, explicit net
@@ -19,9 +20,11 @@ updates widgets, and results are accepted only for the submitted revision.
 Native electrical export compiles wires into nets; graphical persistence is a
 separate future schema. See GUI_DESIGN.md for exact junction/crossing semantics.
 
-Packaging declares the seven product modules explicitly; their public import paths
-are preserved. The console command calls `main.main`, shared with direct script
-execution. Base installation is dependency-free; the dc extra supplies NumPy.
+Packaging declares the application package and installed compatibility modules
+explicitly. Canonical imports use circuit_calculator; compat/ aliases retain
+historical installed imports with the same module and class identities. The console
+command calls circuit_calculator.cli.main, shared with the package and root launchers.
+Base installation is dependency-free; the dc extra supplies NumPy.
 See DEVELOPMENT.md for the >=3.11 installation floor and current CI target.
 
 ## DC milestone design (2026-10-27)

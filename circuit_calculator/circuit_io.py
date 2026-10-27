@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 import tempfile
 
-from circuit import Circuit, CurrentSource, Resistor, VoltageSource
+from circuit_calculator.circuit import Circuit, CurrentSource, Resistor, VoltageSource
 
 MAX_BYTES = 1_048_576
 MAX_DEPTH = 16

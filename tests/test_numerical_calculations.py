@@ -5,9 +5,9 @@ from fractions import Fraction
 import math
 import unittest
 
-from calculations import (series_resistance, parallel_resistance,
+from circuit_calculator.calculations import (series_resistance, parallel_resistance,
                           calculate_ohms_law, calculate_power)
-from main import run_cli
+from circuit_calculator.cli import run_cli
 
 
 class SeriesNumericalTests(unittest.TestCase):

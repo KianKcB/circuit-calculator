@@ -9,9 +9,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from circuit import Circuit, Resistor, VoltageSource
-from circuit_io import CircuitDocument, save_document
-from main import main
+from circuit_calculator.circuit import Circuit, Resistor, VoltageSource
+from circuit_calculator.circuit_io import CircuitDocument, save_document
+from circuit_calculator.cli import main
 
 
 class DCCommandTests(unittest.TestCase):
@@ -59,7 +59,7 @@ class DCCommandTests(unittest.TestCase):
 
     def test_dense_size_guard_runs_before_solver(self):
         self.save_example()
-        with patch('main.MAX_DC_UNKNOWNS', 2), patch('dc.solve_dc') as solve:
+        with patch('circuit_calculator.cli.MAX_DC_UNKNOWNS', 2), patch('circuit_calculator.dc.solve_dc') as solve:
             code, output, errors = self.run_command(['dc', str(self.path)])
         solve.assert_not_called()
         self.assertEqual(code, 1)
@@ -68,7 +68,7 @@ class DCCommandTests(unittest.TestCase):
 
     def test_missing_numpy_has_actionable_error(self):
         self.save_example()
-        with patch('dc.solve_dc', side_effect=ImportError('install the [dc] extra')):
+        with patch('circuit_calculator.dc.solve_dc', side_effect=ImportError('install the [dc] extra')):
             code, output, errors = self.run_command(['dc', str(self.path)])
         self.assertEqual(code, 1)
         self.assertEqual(output, '')

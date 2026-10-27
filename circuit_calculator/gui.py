@@ -4,9 +4,9 @@ from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal, InvalidOperation
 import math
 
-from circuit import Circuit, CurrentSource, Resistor, VoltageSource
-from circuit_io import CircuitDocument, load_document, save_document
-from schematic import (EditorSession, Position, Schematic, Wire, component,
+from circuit_calculator.circuit import Circuit, CurrentSource, Resistor, VoltageSource
+from circuit_calculator.circuit_io import CircuitDocument, load_document, save_document
+from circuit_calculator.schematic import (EditorSession, Position, Schematic, Wire, component,
                        divider_example, terminals, value_of)
 
 
@@ -390,7 +390,7 @@ class CircuitEditor:
             unknowns += sum(type(e) is VoltageSource for e in circuit.elements)
             if unknowns > 200:
                 raise ValueError('GUI DC limit: 200 unknowns')
-            from dc import solve_dc
+            from circuit_calculator.dc import solve_dc
             self.session.result = None
             self._text('Solving DC circuit…')
             self.submitted_revision = self.session.revision

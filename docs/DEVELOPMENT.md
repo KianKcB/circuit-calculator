@@ -9,8 +9,8 @@ switch branches without the user's authorization.
 The installable package requires Python >=3.11. Maintained CI targets CPython
 3.11-3.14 on Windows and Linux; other versions/platforms are not in the matrix.
 This replaces the previously unverified README Python 3.7 support claim. The
-existing flat imports and direct script execution remain supported. The current
-local package version is 0.3.0; no release or registry publication has occurred.
+installed flat imports and root launcher remain supported. The current
+local package version is 0.3.1; no release or registry publication has occurred.
 The project's license is still undecided; no license grant is invented by packaging.
 
 For source development on Windows:
@@ -24,20 +24,20 @@ python -m venv .venv
 For the pinned DC validation baseline:
 
 ```text
-.venv/Scripts/python -m pip install -c constraints-ci.txt -e ".[dc]"
+.venv/Scripts/python -m pip install -c requirements/ci-constraints.txt -e ".[dc]"
 .venv/Scripts/python -B -m unittest -v
 ```
 
 Linux/macOS use `.venv/bin/python` instead. Editable installs are convenient for
 development but do not prove wheel/sdist contents are correct. Base runtime has
-no third-party dependencies. `requirements-dc.txt` retains the source-only NumPy
+no third-party dependencies. `requirements/dc.txt` retains the source-only NumPy
 installation path and matches the `[dc]` extra's broader compatibility range.
 
 ## Build and verify distributions
 
 ```text
 python -m venv .venv-build
-.venv-build/Scripts/python -m pip install -r requirements-build.txt
+.venv-build/Scripts/python -m pip install -r requirements/build.txt
 .venv-build/Scripts/python -m build
 python -B scripts/check_distributions.py
 ```
@@ -49,9 +49,12 @@ under ignored `.build-check/`, installs that exact local wheel with no dependenc
 resolution, tests core-only behavior, installs its DC extra with constraints,
 checks dependencies, and tests the full DC installation. It never modifies the
 caller's environment. Repeat using each Python interpreter you want to verify.
+Finally it changes that temporary environment to an editable installation and
+verifies canonical and legacy imports outside the checkout. That last check uses
+source-origin expectations instead of the wheel test's site-packages requirement.
 
-Pinned frontend dependencies are in requirements-build.txt; the backend is pinned
-in pyproject.toml and the DC baseline in constraints-ci.txt. Update pins deliberately
+Pinned frontend dependencies are in requirements/build.txt; the backend is pinned
+in pyproject.toml and the DC baseline in requirements/ci-constraints.txt. Update pins deliberately
 and rerun installed checks. The broad runtime NumPy range is not a lockfile.
 Pins stabilize resolution, not bit-identical archives or hosted OS images.
 
@@ -71,9 +74,30 @@ and update the next action in PROJECT_STATUS.md.
 
 Lint/type-check tooling remains deferred; stdlib unittest is the test runner.
 
+## File organization and import migration
+
+All application implementations live in `circuit_calculator/`. Use qualified
+imports, for example `from circuit_calculator.circuit import Circuit`. The CLI
+implementation is now `circuit_calculator/cli.py`; `main.py` at the root only
+forwards to it. `python -m circuit_calculator` is the preferred checkout and
+installed invocation. Existing checkout `python main.py` and installed
+`python -m main` still work. Installed legacy imports are aliases in `compat/`;
+install with `pip install -e .` before using them from a source checkout.
+
+`tests/` contains the headless suite and an initializer for default unittest
+discovery. `python -B -m unittest -v` still works from the repository root; focus
+a module with `python -B -m unittest -v tests.test_dc`. The installed verifier
+copies only tests into an isolated temporary directory, never application sources.
+
+Technical documentation lives in `docs/`, dependency inputs in `requirements/`,
+workflow helpers in `scripts/`, sample documents in `examples/`, and CI in
+`.github/workflows/`. Add future features to the existing package rather than
+creating new top-level implementation modules. Historical status entries may
+refer to their original paths; the REORG-1 entry records the migration.
+
 ## GUI development
 
-Launch `python main.py gui --example` in a desktop session with Tkinter/Tk.
+Launch `python -m circuit_calculator gui --example` in a desktop session with Tkinter/Tk.
 Tk is optional in some Python distributions; install it using that distributor's
 instructions. NumPy remains optional until simulation. Keep editing/connectivity
 logic in schematic.py, rendering/dialogs in gui.py, and solver/math in dc.py.

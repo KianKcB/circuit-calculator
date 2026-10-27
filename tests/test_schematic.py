@@ -7,9 +7,9 @@ from contextlib import redirect_stderr, redirect_stdout
 import unittest
 from unittest.mock import patch
 
-from circuit import Circuit, Resistor, VoltageSource
-from circuit_io import CircuitDocument, dumps_document, loads_document
-from schematic import (Schematic, Position, Wire, EditorSession, component,
+from circuit_calculator.circuit import Circuit, Resistor, VoltageSource
+from circuit_calculator.circuit_io import CircuitDocument, dumps_document, loads_document
+from circuit_calculator.schematic import (Schematic, Position, Wire, EditorSession, component,
                        divider_example, terminals, value_of)
 
 
@@ -120,7 +120,7 @@ class SchematicTests(unittest.TestCase):
 
     @unittest.skipUnless(importlib.util.find_spec('numpy'), 'optional NumPy DC dependency missing')
     def test_editor_export_load_solve_matches_independent_divider(self):
-        from dc import solve_dc
+        from circuit_calculator.dc import solve_dc
         state = divider_example()
         loaded = loads_document(dumps_document(state.compile()))
         result = solve_dc(loaded.circuit)
@@ -174,16 +174,16 @@ class EditorSessionTests(unittest.TestCase):
 
 class GUICommandTests(unittest.TestCase):
     def test_gui_command_passes_example_to_lazy_launcher_without_importing_tk(self):
-        from main import main
-        with patch('gui.launch') as launch:
+        from circuit_calculator.cli import main
+        with patch('circuit_calculator.gui.launch') as launch:
             self.assertEqual(main(['gui', '--example']), 0)
         self.assertEqual(launch.call_args.args[0], divider_example())
 
     def test_missing_tk_and_missing_display_are_clean_command_errors(self):
-        from main import main
+        from circuit_calculator.cli import main
         for failure in (ImportError('no Tk'), ValueError('Cannot initialize a Tk display')):
             output, errors = io.StringIO(), io.StringIO()
-            with self.subTest(failure=failure), patch('gui.launch', side_effect=failure), redirect_stdout(output), redirect_stderr(errors):
+            with self.subTest(failure=failure), patch('circuit_calculator.gui.launch', side_effect=failure), redirect_stdout(output), redirect_stderr(errors):
                 self.assertEqual(main(['gui']), 1)
             self.assertEqual(output.getvalue(), '')
             self.assertIn('Tk', errors.getvalue())

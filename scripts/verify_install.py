@@ -23,7 +23,7 @@ def main():
     scratch.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='installed-', dir=scratch) as folder:
         folder = Path(folder)
-        tests = sorted(root.glob('test_*.py'))
+        tests = sorted((root / 'tests').glob('test_*.py'))
         if not tests:
             raise RuntimeError('No test files found in distribution/source tree')
         for path in tests:
@@ -41,7 +41,10 @@ import unittest
 folder = Path(sys.argv[1]).resolve()
 require_dc = sys.argv[2] == 'dc'
 environment = Path(sys.prefix).resolve()
-for name in ('calculations', 'circuit', 'circuit_io', 'dc', 'main', 'schematic', 'gui'):
+for name in ('circuit_calculator', 'circuit_calculator.calculations',
+             'circuit_calculator.circuit', 'circuit_calculator.circuit_io',
+             'circuit_calculator.dc', 'circuit_calculator.cli',
+             'circuit_calculator.schematic', 'circuit_calculator.gui'):
     spec = importlib.util.find_spec(name)
     if spec is None or not Path(spec.origin).resolve().is_relative_to(environment):
         raise RuntimeError('Module did not come from installed environment: ' + name)
@@ -57,22 +60,31 @@ completed = subprocess.run([str(command), 'gui', '--help'], text=True, encoding=
                            capture_output=True, check=True, cwd=folder, timeout=30)
 if '--example' not in completed.stdout:
     raise RuntimeError('Installed GUI command help missing')
-for argv in ([str(command)], [sys.executable, '-I', '-m', 'main']):
+for argv in ([str(command)], [sys.executable, '-I', '-m', 'main'],
+             [sys.executable, '-I', '-m', 'circuit_calculator']):
     completed = subprocess.run(argv, input='2\n1e-320\n\n6\n', text=True,
                                encoding='utf-8', capture_output=True, check=True,
                                cwd=folder, timeout=30)
     if '1e-320' not in completed.stdout or 'Goodbye.' not in completed.stdout:
         raise RuntimeError('Installed CLI failed: ' + completed.stdout)
-from circuit import Circuit, Resistor, VoltageSource
-from dc import solve_dc
-from circuit_io import CircuitDocument, save_document, load_document
+from circuit_calculator.circuit import Circuit, Resistor, VoltageSource
+from circuit_calculator.dc import solve_dc
+from circuit_calculator.circuit_io import CircuitDocument, save_document, load_document
+# Installed legacy modules are aliases, not duplicate copies of domain classes.
+import importlib
+for old, new in (('calculations', 'calculations'), ('circuit', 'circuit'),
+                 ('circuit_io', 'circuit_io'), ('dc', 'dc'), ('main', 'cli'),
+                 ('gui', 'gui'), ('schematic', 'schematic')):
+    if importlib.import_module(old) is not importlib.import_module('circuit_calculator.' + new):
+        raise RuntimeError('Legacy import does not alias canonical module: ' + old)
 example = Circuit(('g', 'a'), (VoltageSource('V', 'a', 'g', 6), Resistor('R', 'a', 'g', 3)), 'g')
 document_path = folder / 'installed-example.json'
 save_document(CircuitDocument(example, 'Installed example'), document_path)
 if load_document(document_path).circuit != example:
     raise RuntimeError('Installed persistence round trip failed')
 for argv in ([str(command), 'dc', str(document_path)],
-             [sys.executable, '-I', '-m', 'main', 'dc', str(document_path)]):
+             [sys.executable, '-I', '-m', 'main', 'dc', str(document_path)],
+             [sys.executable, '-I', '-m', 'circuit_calculator', 'dc', str(document_path)]):
     completed = subprocess.run(argv, text=True, encoding='utf-8', capture_output=True,
                                cwd=folder, timeout=30)
     if require_dc:

@@ -86,7 +86,7 @@ applies a 200-unknown size guard before allocating a dense matrix.
 
 ## DC command
 
-`circuit-calculator dc FILE.json` (or `python main.py dc FILE.json`) loads the
+`circuit-calculator dc FILE.json` (or `python -m circuit_calculator dc FILE.json`) loads the
 document and writes deterministic, indented JSON with `title`, `reference_node`,
 `node_voltages_volts`, per-element `voltage_volts`/`current_amperes`/`power_watts`,
 and numerical diagnostics. Values retain float precision; there is no display

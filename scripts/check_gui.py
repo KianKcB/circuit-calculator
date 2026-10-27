@@ -17,10 +17,10 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import tkinter as tk
-from circuit_io import load_document
-from dc import solve_dc
-from gui import CircuitEditor
-from schematic import divider_example
+from circuit_calculator.circuit_io import load_document
+from circuit_calculator.dc import solve_dc
+from circuit_calculator.gui import CircuitEditor
+from circuit_calculator.schematic import divider_example
 
 
 class TkWorkflowTests(unittest.TestCase):

@@ -4,7 +4,7 @@ import math
 import unittest
 from decimal import Decimal
 
-from circuit import Circuit, CurrentSource, Resistor, VoltageSource
+from circuit_calculator.circuit import Circuit, CurrentSource, Resistor, VoltageSource
 
 
 class ElementTests(unittest.TestCase):

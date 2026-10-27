@@ -3,8 +3,8 @@
 from dataclasses import dataclass, replace
 import math
 
-from circuit import Circuit, CurrentSource, Resistor, VoltageSource
-from circuit_io import CircuitDocument
+from circuit_calculator.circuit import Circuit, CurrentSource, Resistor, VoltageSource
+from circuit_calculator.circuit_io import CircuitDocument
 
 MAX_NODES = 100
 MAX_ELEMENTS = 200

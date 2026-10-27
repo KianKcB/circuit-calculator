@@ -1,6 +1,7 @@
 # Circuit Calculator
 
-A small Python command-line tool for calculating equivalent resistance in series and parallel circuits, and solving for voltage, current, or resistance with Ohm's law.
+A Python circuit calculator with standalone electrical formulas, linear DC
+network analysis, and a Tk desktop editor prototype.
 
 ## Features
 
@@ -15,25 +16,27 @@ A small Python command-line tool for calculating equivalent resistance in series
 - **DC file command:** solves a supported circuit document and returns JSON results with units and diagnostics.
 - **Desktop prototype:** Tk junction editor for explicit R/V/I connections, wires, reference selection, undo/redo, circuit import/export and DC results.
 
-## Project files
+## Project layout
 
-| File | Purpose |
-| --- | --- |
-| `main.py` | Interactive command-line menu and input/output handling. |
-| `calculations.py` | Series resistance, parallel resistance, and Ohm's law calculations and validation. |
-| `circuit.py` | Immutable validated resistor and independent-source circuit model. |
-| `circuit_io.py` | Version-1 JSON document loading/saving, separate from model and solver. |
-| `schematic.py` | GUI-independent junction layout, explicit wire/net compilation and undo/revision state. |
-| `gui.py` | Tk desktop network editor and asynchronous DC result presentation. |
-| `dc.py` | Linear DC MNA assembly, solving, results and diagnostics. |
-| `test_dc.py` | Analytical reference circuits and solver failure tests. |
-| `test_calculations.py` | Unit tests for the calculations and CLI behavior. |
-| `test_numerical_calculations.py` | Extreme-value regressions, numeric-type compatibility and independent power references. |
-| `pyproject.toml` | Package metadata, optional DC dependency and installed CLI command. |
-| `.github/workflows/tests.yml` | Windows/Linux installation and test matrix. |
-| `scripts/check_distributions.py` | Fresh-venv checks of the built wheel and installed test suite. |
-| `examples/divider.json` | Native circuit document with an independently known 8 V output. |
-| `.gitignore` | Excludes Python caches, virtual environments, test caches, and local environment files. |
+```text
+circuit-calculator/
+├── circuit_calculator/  # Models, formulas, solver, persistence, CLI and GUI
+├── tests/               # Headless regression suite
+├── docs/                # Architecture, roadmap, status and format specifications
+├── requirements/        # Build/DC dependencies and CI constraints
+├── scripts/             # Build/install and optional Tk verification helpers
+├── examples/            # Example circuit documents
+├── compat/              # Installed adapters for historical flat imports
+├── main.py              # Small compatibility launcher for the checkout
+├── pyproject.toml       # Package metadata and command entry point
+└── README.md
+```
+
+Application modules live together in `circuit_calculator/`: `circuit.py` is the
+model, `calculations.py` standalone formulas, `dc.py` analysis, `circuit_io.py`
+persistence, `schematic.py` editor state, `gui.py` Tk rendering, and `cli.py` command
+handling. Start with [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for current
+progress and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for development commands.
 
 ## Requirements and setup
 
@@ -41,7 +44,7 @@ A small Python command-line tool for calculating equivalent resistance in series
   Windows and Linux. Newer versions are outside the current test matrix.
 - The formula CLI and circuit model need only the standard library. DC solving
   adds the optional NumPy dependency.
-- Version 0.3.0 is currently a local development package. Installation commands
+- Version 0.3.1 is currently a local development package. Installation commands
   below use this checkout; it has not been published to a package registry.
 
 Open a terminal in the project directory and check that Python is available:
@@ -68,18 +71,21 @@ On Linux/macOS the equivalent paths are `.venv/bin/python` and
 `.venv/bin/circuit-calculator`. macOS is not currently in the CI matrix.
 The base install has no third-party runtime dependencies; building/installing
 uses setuptools. Source-only formula use still needs no installation step.
-Existing imports such as `from circuit import Circuit` remain supported.
+New code uses imports such as `from circuit_calculator.circuit import Circuit`.
+After installation, older imports such as `from circuit import Circuit` also
+work through the adapters in `compat/`. Source-only code should use package imports.
 
-For development and repeatable dependency checks, see [DEVELOPMENT.md](DEVELOPMENT.md).
+For development and repeatable dependency checks, see [DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 ## Run the application
 
 ```bash
-python main.py
+python -m circuit_calculator
 ```
 
 After installation you can also use `circuit-calculator` from the environment's
-Scripts/bin directory, or `python -m main` with that environment's interpreter.
+Scripts/bin directory. Existing `python main.py` checkout commands and installed
+`python -m main` commands still work.
 
 Choose an operation from the menu:
 
@@ -174,13 +180,13 @@ small linear networks of positive resistors and independent sources. The first
 desktop network editor is available below. Controlled/reactive/nonlinear
 components and unit prefixes are not yet
 implemented. Numerical policies and remaining limitations are recorded in
-[PROJECT_STATUS.md](PROJECT_STATUS.md).
+[PROJECT_STATUS.md](docs/PROJECT_STATUS.md).
 
 ## Linear DC analysis from Python
 
 ```python
-from circuit import Circuit, Resistor, VoltageSource
-from dc import solve_dc
+from circuit_calculator.circuit import Circuit, Resistor, VoltageSource
+from circuit_calculator.dc import solve_dc
 
 circuit = Circuit(
     nodes=("ground", "input", "output"),
@@ -207,7 +213,7 @@ Positive power is absorbed and negative power is delivered. Results are read-onl
 voltage-source constraints, and unsafe numerical results through `DCError`
 subclasses. A zero-volt source can represent an ideal short with a measured
 branch current, but loops of such sources are rejected as non-unique.
-See [ARCHITECTURE.md](ARCHITECTURE.md) for numerical limits and exact source-loop
+See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for numerical limits and exact source-loop
 policy. This is a small-network DC engine, not a complete SPICE simulator.
 
 ## Save, load and analyze circuit documents
@@ -217,7 +223,7 @@ It preserves component/node order, Unicode names and source polarity. Persistenc
 needs only the standard library; solving also needs the `[dc]` extra.
 
 ```python
-from circuit_io import CircuitDocument, save_document, load_document
+from circuit_calculator.circuit_io import CircuitDocument, save_document, load_document
 
 # `circuit` is the Circuit from the Python example above.
 document = CircuitDocument(circuit, title="Divider", description="12 V input")
@@ -231,12 +237,12 @@ explicitly when replacing your document. Saves install a completed temporary
 file atomically; default creation requires filesystem hard-link support.
 Malformed documents raise `CircuitFormatError`; filesystem failures retain
 their ordinary Python error types. Loading never executes expressions or resolves
-external files. See [CIRCUIT_FORMAT.md](CIRCUIT_FORMAT.md) for schema and size limits.
+external files. See [CIRCUIT_FORMAT.md](docs/CIRCUIT_FORMAT.md) for schema and size limits.
 
 Run the provided example from the checkout:
 
 ```text
-python main.py dc examples/divider.json
+python -m circuit_calculator dc examples/divider.json
 ```
 
 With the package installed, use `circuit-calculator dc FILE.json` or
@@ -251,13 +257,13 @@ Running without arguments still opens the original formula menu.
 ## Desktop DC network editor (prototype)
 
 ```text
-python main.py gui --example
+python -m circuit_calculator gui --example
 ```
 
 Or, after installation, `circuit-calculator gui --example`. Omit `--example` to
 start with one empty junction. Tkinter/Tk must be installed with your Python
 distribution; some Linux distributions package it separately. Drawing/exporting
-needs no NumPy; simulation needs the `[dc]` extra. See [GUI_DESIGN.md](GUI_DESIGN.md)
+needs no NumPy; simulation needs the `[dc]` extra. See [GUI_DESIGN.md](docs/GUI_DESIGN.md)
 for the framework decision and supported scope.
 
 1. Choose **Junction** and click empty canvas space to place named junctions.
@@ -293,5 +299,5 @@ The following are planned ideas and are **not implemented**:
 - Extended DC analysis with controlled sources and equivalent-port calculations.
 - RC and RLC circuit analysis.
 
-See [ROADMAP.md](ROADMAP.md) for phased dependencies, [TESTING.md](TESTING.md)
-for validation, and [PROJECT_STATUS.md](PROJECT_STATUS.md) for the next batch.
+See [ROADMAP.md](docs/ROADMAP.md) for phased dependencies, [TESTING.md](docs/TESTING.md)
+for validation, and [PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for the next batch.

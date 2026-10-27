@@ -4,8 +4,8 @@ import importlib.util
 import math
 import unittest
 
-from circuit import Circuit, CurrentSource as I, Resistor as R, VoltageSource as V
-from dc import (assemble_dc, solve_dc, ContradictorySourceError,
+from circuit_calculator.circuit import Circuit, CurrentSource as I, Resistor as R, VoltageSource as V
+from circuit_calculator.dc import (assemble_dc, solve_dc, ContradictorySourceError,
                 FloatingNetworkError, MissingReferenceError,
                 NonUniqueSolutionError, NumericalError, InconsistentCurrentError)
 

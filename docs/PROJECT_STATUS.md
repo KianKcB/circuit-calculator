@@ -1,10 +1,12 @@
 # Project status and continuation
 
-Date: 2026-10-27. HEAD remains `341d094`. PERSIST-1 was already staged when
-GUI-1 began; its staged index has been preserved. GUI-1 additions/updates are
-unstaged, including overlapping files that now show MM/AM. No commit, push or
-index update was performed by the agent. Always inspect both staged and unstaged
-diffs before reviewing/committing this checkpoint.
+Date: 2026-10-27. PERSIST-1 and GUI-1 were committed by the user as `c4a13dd`.
+REORG-1 began with a clean working tree. The current reorganization is local and
+uncommitted; no staging, commits, pushes or branch changes were performed by the
+agent. Current implementation paths are under circuit_calculator/, tests under
+tests/, technical docs here in docs/, and dependency inputs in requirements/.
+Historical batch entries below retain filenames/commands from their original
+snapshots; use README and DEVELOPMENT.md for current commands.
 
 ## Initial audit
 
@@ -302,16 +304,67 @@ CLI/DC commands and editor topology tests. The wheel contains the seven current
 product modules; the source archive includes GUI design and widget-test scripts.
 `git diff --check` passed. No hosted GUI/CI execution is claimed.
 
+## Batch REORG-1: package, tests and documentation organization
+
+Status: VERIFIED locally, including source, Tk, wheel and editable-install checks.
+Base `c4a13dd`, initially clean, no unrelated modifications to preserve. Local
+package version is 0.3.1. This batch changes organization and packaging only.
+
+- circuit_calculator/: the seven existing implementation modules, with main.py
+  renamed to cli.py; package initializer and __main__ entry point added.
+- tests/: all seven existing regression modules plus discovery initializer.
+- docs/: all eight technical documents; README remains at repository root with
+  a concise directory map and working relative links.
+- requirements/: build.txt, dc.txt and ci-constraints.txt. Scripts and CI paths
+  updated to match; no dependency versions or runtime requirements changed.
+- compat/: seven small installed adapters, aliasing canonical modules so old
+  imports retain exact module/class identity. New checkout imports use package
+  paths; installed/editable environments retain old flat imports. Root main.py
+  remains a thin compatibility launcher.
+- scripts/ and examples/ retain their roles. Manifest, package metadata, command
+  entry point and isolated installation checks updated. Source archives include
+  the root launcher, moved docs/tests, requirements and compatibility adapters.
+- AST comparison against HEAD confirmed all seven implementation modules and
+  seven regression modules changed only import/patch paths, with no algorithm
+  or expected-value changes. Function signatures, native file formats and GUI
+  behavior remain unchanged.
+
+Source verification: `python -B -m unittest -q` and `py -3.14 -B -m unittest -q`
+passed **162 tests**. `python -B -S -m unittest -q` passed **146 with 16 expected
+skips**. `python -B scripts/check_gui.py -q` passed **nine Tk workflow tests**.
+The package DC command returned expected 8 V divider output; root launcher help
+still works. All local Markdown links checked successfully. Distribution build
+produced the new package plus compatibility modules.
+
+Python 3.11 fresh wheel checks passed core-only **146 + 16 expected skips** and
+DC **162, no skips** under NumPy 2.4.6. Canonical and installed legacy aliases were
+verified identical. Editable installation then verified source-origin canonical
+imports and the same legacy aliases outside the checkout. Python 3.14 completed
+the same checks successfully: **146 + 16 expected skips** in core-only mode,
+**162 with no skips** with DC, pip dependency checks, canonical/legacy module
+identity and editable imports/command help. Nine Tk checks also passed on 3.14.
+Build used `.venv-build/Scripts/python -m build`; the two install runs used
+`python -B scripts/check_distributions.py` and its `py -3.14` equivalent.
+Markdown links, syntax and whitespace checks passed. The built wheel retains
+only product modules and adapters; docs/tests/requirements remain in the source
+archive rather than being installed as importable application packages.
+
+Migration: new source code should use `from circuit_calculator.circuit import
+Circuit` (or other package modules) and `python -m circuit_calculator`.
+`python main.py` remains available in the checkout; installed `python -m main`
+and historical imports still work. Flat imports directly from an uninstalled
+checkout now require installation or migration to the qualified package names.
+No changes to running GUI sessions or user documents were requested/performed.
+Hosted CI is configured but was not inspected/run from this session.
+
 ## Exact next action
 
-Review the staged PERSIST-1 changes and additional unstaged GUI-1 changes. Stage
-new GUI files and updated working-tree versions only after review. If committing
-them together, suggested message: `Add versioned circuit files and Tk DC editor prototype`.
-The user handles staging/commits/pushes. Existing staged files were not restaged
-or reset, and the current GUI additions will not be included by a staged-only commit.
+Review this organizational refactor. Git will show moved files as deletions plus
+new paths until staging/rename detection. Suggested commit message:
+`Organize application, tests, docs and dependency files into folders`.
+The user handles staging/commits/pushes; the index has not been changed.
 
-Next batch: versioned schematic-project persistence independent of electrical v1
-files, preserving coordinates, explicit wire segments and view state with strict
-validation, atomic saves and graphical round-trip tests. Then expand toward free
-component placement/rotation and terminal-level wire routing. Inspect hosted CI
-separately after pushes; no remote CI result is claimed here.
+Next feature batch remains versioned schematic-project persistence, independent
+of native electrical v1 files: preserve coordinates, explicit wires and view state
+with strict validation, atomic saves and round-trip tests. Add new application
+code under circuit_calculator/ and new regression tests under tests/.

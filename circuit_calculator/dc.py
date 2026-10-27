@@ -6,7 +6,7 @@ import math
 from types import MappingProxyType
 from typing import Mapping, Tuple
 
-from circuit import Circuit, CurrentSource, Resistor, VoltageSource
+from circuit_calculator.circuit import Circuit, CurrentSource, Resistor, VoltageSource
 
 
 class DCError(ValueError):

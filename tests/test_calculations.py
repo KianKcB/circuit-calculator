@@ -4,7 +4,7 @@ import math
 import unittest
 from decimal import Decimal
 
-from calculations import (
+from circuit_calculator.calculations import (
     calculate_current_divider,
     calculate_ohms_law,
     calculate_power,
@@ -12,7 +12,7 @@ from calculations import (
     parallel_resistance,
     series_resistance,
 )
-from main import run_cli
+from circuit_calculator.cli import run_cli
 
 
 class SeriesResistanceTests(unittest.TestCase):

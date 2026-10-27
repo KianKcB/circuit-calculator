@@ -4,7 +4,7 @@
 
 ```text
 python -B -m unittest -v
-python -B -m unittest -v test_dc
+python -B -m unittest -v tests.test_dc
 python -B -S -m unittest -v
 python -B scripts/check_distributions.py
 git diff --check
@@ -12,14 +12,17 @@ git diff --check
 
 `-B` avoids writing bytecode. `-S` omits site-packages: it exercises the
 standard-library baseline and DC assembly while NumPy solve tests skip. Skips
-are not solver verification. Without NumPy installed, use requirements-dc.txt
+are not solver verification. Without NumPy installed, use requirements/dc.txt
 before assessing the full solver suite.
 
 `scripts/check_distributions.py` requires a built wheel in `dist/` (see
 DEVELOPMENT.md). It tests a fresh venv first without NumPy, then with the pinned
 DC extra. Product modules must resolve inside that venv. Test files alone are
 copied into a temporary directory outside the source modules and run using
-isolated Python. Both the installed command and `python -m main` are exercised.
+isolated Python. The installed command, `python -m circuit_calculator`, and legacy
+`python -m main` are exercised. Installed flat-import aliases must be identical
+to their canonical package modules. The temporary environment is then checked
+with an editable install, outside the checkout.
 DC checks fail if any test is skipped. Core-only checks verify missing-dependency
 advice and explicitly accept optional-solver skips.
 
@@ -66,6 +69,15 @@ accommodate an implementation error.
 
 ## Latest local run: 2026-10-27
 
+REORG-1: all 162 existing tests and nine Tk workflow checks passed on Python
+3.11.9 and 3.14.6 after moving code/tests into folders. Core-only checks passed
+146 with 16 expected optional-NumPy skips. Fresh wheel installations passed
+those same core/DC suites on both versions; pip dependency checks, installed
+canonical/legacy command forms and module identity passed. Editable installs
+also resolved canonical and historical imports outside the checkout. AST
+comparison confirmed the seven implementations and seven regression modules
+changed only import/patch paths. Markdown links and distribution paths checked.
+
 GUI-1: 162 headless tests passed on Python 3.11.9 and 3.14.6; without site-packages,
 146 passed with 16 expected optional-NumPy skips. Nine opt-in Tk workflow tests
 passed on each interpreter. Visual inspection of the live editor identified and
@@ -83,7 +95,7 @@ and widget-test scripts.
 PERSIST-1: Python 3.11.9 and 3.14.6 source runs each passed 144 tests. Without
 site-packages: 129 passed and 15 optional-NumPy tests skipped. This batch adds
 27 persistence tests and 7 command tests. The divider example executed through
-`python main.py dc examples/divider.json` with 8 V output, 4 mA resistor currents
+`python -m circuit_calculator dc examples/divider.json` with 8 V output, 4 mA resistor currents
 and zero reported KCL/power residuals. Fresh installed checks passed on both
 interpreters: 129 passed with 15 expected skips in core-only mode, then all 144
 with no skips under NumPy 2.4.6. These runs also exercised document save/load,
