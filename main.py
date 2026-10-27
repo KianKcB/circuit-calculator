@@ -1,6 +1,8 @@
-"""Interactive command-line interface for circuit calculations."""
+"""Interactive formulas and native-file DC analysis command-line interface."""
 
 import sys
+import argparse
+import json
 from decimal import Decimal
 
 from calculations import (
@@ -184,12 +186,70 @@ def run_cli(input_fn=None, output_fn=None):
             return
 
 
-def main():
-    """Installed command entry point, also used by direct script execution."""
+MAX_DC_UNKNOWNS = 200
+
+
+def _run_dc_file(path):
+    """Load a native document and return complete SI-unit DC results as JSON."""
+    from circuit import VoltageSource
+    from circuit_io import load_document
+    from dc import solve_dc
+
+    document = load_document(path)
+    circuit = document.circuit
+    unknowns = len(circuit.nodes) - (circuit.reference_node is not None)
+    unknowns += sum(isinstance(element, VoltageSource) for element in circuit.elements)
+    if unknowns > MAX_DC_UNKNOWNS:
+        raise ValueError(f'DC command supports at most {MAX_DC_UNKNOWNS} unknowns; this circuit has {unknowns}')
+    result = solve_dc(circuit)
+    output = {
+        'title': document.title,
+        'reference_node': result.reference_node,
+        'node_voltages_volts': dict(result.node_voltages),
+        'elements': {name: {'voltage_volts': value.voltage_volts,
+                            'current_amperes': value.current_amperes,
+                            'power_watts': value.power_watts}
+                     for name, value in result.elements.items()},
+        'diagnostics': {
+            'scaled_condition_number': result.scaled_condition_number,
+            'max_kcl_residual_amperes': result.max_kcl_residual_amperes,
+            'power_balance_watts': result.power_balance_watts,
+        },
+    }
+    print(json.dumps(output, allow_nan=False, ensure_ascii=False, indent=2, sort_keys=True))
+
+
+def main(argv=None):
+    """Installed command: interactive formulas, or native-file DC analysis."""
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
-    run_cli()
+    if hasattr(sys.stderr, 'reconfigure'):
+        sys.stderr.reconfigure(encoding='utf-8')
+    parser = argparse.ArgumentParser(description='Electrical formulas and linear DC circuit analysis')
+    commands = parser.add_subparsers(dest='command')
+    dc_parser = commands.add_parser('dc', help='solve a native version-1 JSON circuit')
+    dc_parser.add_argument('path', help='UTF-8 circuit JSON file')
+    gui_parser = commands.add_parser('gui', help='open the Tk DC network editor')
+    gui_parser.add_argument('--example', action='store_true', help='start with a divider example')
+    args = parser.parse_args(argv)
+    if args.command is None:
+        run_cli()
+        return 0
+    try:
+        if args.command == 'gui':
+            from gui import launch
+            from schematic import divider_example
+            try:
+                launch(divider_example() if args.example else None)
+            except ImportError as error:
+                raise ImportError('The GUI requires Tkinter/Tk from your Python distributor') from error
+        else:
+            _run_dc_file(args.path)
+    except (ValueError, TypeError, OSError, ImportError) as error:
+        print(f'Error: {error}', file=sys.stderr)
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

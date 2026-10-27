@@ -1,5 +1,51 @@
 # Decisions
 
+## 2026-10-27: GUI-1 Tk network editor prototype
+
+The detailed framework comparison, references, electrical junction rules,
+threading/revision policy and acceptance contract are in GUI_DESIGN.md. Choose
+Tkinter for the first bounded editor without a new pip GUI dependency; keep
+schematic.py independent so the renderer can change if needed. Do not infer
+connectivity from coordinates. Native electrical files remain v1 and do not
+silently acquire graphical fields. Export compiles explicit wires into nets;
+full schematic-project persistence is the next milestone. Package version 0.3.0
+tracks the added GUI API/command, independently of circuit-file version.
+
+PERSIST-1 files were already staged at the start of GUI-1. Preserve their index;
+GUI additions and updates remain unstaged for the user's combined/separate review.
+
+## 2026-10-27: PERSIST-1 native documents and file-based DC workflow
+
+Use strict versioned UTF-8 JSON rather than pickle, executable Python or a partial
+SPICE dialect. Keep metadata in CircuitDocument, preserving the immutable Circuit
+model and its public constructors. Exact version/type/field validation rejects
+silent coercion and future constructs the engine cannot interpret. Decimal
+parsing avoids turning a tiny nonzero numeric literal into zero before model
+validation. Preserve valid but unsolvable descriptions and leave topology to DC.
+
+Adopt byte/count/string/nesting limits for file import/export, document them in
+CIRCUIT_FORMAT.md, and reject duplicate keys and invalid Unicode. Deterministic
+serialization preserves user ordering; no external file or expression resolution.
+Atomic sibling-file saves validate before any destination change. Default
+creation uses a hard link to avoid overwriting concurrent/existing files;
+overwrite=True explicitly chooses os.replace. No silent fallback weakens these
+semantics on filesystems without link support; expose OSError instead.
+
+After persistence tests passed, add the dependent DC file command in the existing
+CLI entry point. Default no-argument menu remains usable. JSON results include
+explicit units, physical sign conventions and diagnostics. Cap CLI analysis at
+200 unknowns before dense assembly; loading larger valid documents remains
+possible programmatically. A future sparse-backend decision must justify lifting
+that CLI bound. Treat this added API/workflow as local package version 0.2.0;
+native file version 1 is independent of package version.
+
+Acceptance includes malformed/type/numeric/resource failures, no-clobber saves,
+write-failure cleanup, all-element round trips, independent divider results,
+installed API and CLI workflows with/without NumPy, and full regression suites.
+Affected: circuit_io.py, main.py, tests, package metadata/manifest, installed
+verification helpers, example document and documentation. No circuit model or
+solver mathematics changes; no dependency added.
+
 ## 2026-10-27: PKG-1 installation and continuous integration
 
 Goal: make distribution contents and optional-dependency behavior testable in

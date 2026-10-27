@@ -1,0 +1,39 @@
+{
+  "circuit": {
+    "elements": [
+      {
+        "minus_node": "g",
+        "name": "V1",
+        "plus_node": "in",
+        "type": "voltage_source",
+        "voltage_volts": 12.0
+      },
+      {
+        "name": "R1",
+        "node_a": "in",
+        "node_b": "out",
+        "resistance_ohms": 1000.0,
+        "type": "resistor"
+      },
+      {
+        "name": "R2",
+        "node_a": "out",
+        "node_b": "g",
+        "resistance_ohms": 2000.0,
+        "type": "resistor"
+      }
+    ],
+    "nodes": [
+      "g",
+      "in",
+      "out"
+    ],
+    "reference_node": "g"
+  },
+  "format": "circuit-calculator",
+  "metadata": {
+    "description": "Expected output: 8 V; resistor current: 4 mA.",
+    "title": "12 V divider"
+  },
+  "version": 1
+}

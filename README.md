@@ -11,6 +11,9 @@ A small Python command-line tool for calculating equivalent resistance in series
 - **Voltage divider:** calculates the ideal voltage drop across a selected resistor in a series network.
 - **Current divider:** calculates current through a selected branch in a parallel network, including defined ideal short-circuit cases.
 - **Interactive CLI:** guides you through each calculation, shows units, and returns to the menu after successful calculations or handled input errors.
+- **Native circuit documents:** versioned JSON with circuit metadata, strict input validation and safe explicit saves.
+- **DC file command:** solves a supported circuit document and returns JSON results with units and diagnostics.
+- **Desktop prototype:** Tk junction editor for explicit R/V/I connections, wires, reference selection, undo/redo, circuit import/export and DC results.
 
 ## Project files
 
@@ -19,6 +22,9 @@ A small Python command-line tool for calculating equivalent resistance in series
 | `main.py` | Interactive command-line menu and input/output handling. |
 | `calculations.py` | Series resistance, parallel resistance, and Ohm's law calculations and validation. |
 | `circuit.py` | Immutable validated resistor and independent-source circuit model. |
+| `circuit_io.py` | Version-1 JSON document loading/saving, separate from model and solver. |
+| `schematic.py` | GUI-independent junction layout, explicit wire/net compilation and undo/revision state. |
+| `gui.py` | Tk desktop network editor and asynchronous DC result presentation. |
 | `dc.py` | Linear DC MNA assembly, solving, results and diagnostics. |
 | `test_dc.py` | Analytical reference circuits and solver failure tests. |
 | `test_calculations.py` | Unit tests for the calculations and CLI behavior. |
@@ -26,6 +32,7 @@ A small Python command-line tool for calculating equivalent resistance in series
 | `pyproject.toml` | Package metadata, optional DC dependency and installed CLI command. |
 | `.github/workflows/tests.yml` | Windows/Linux installation and test matrix. |
 | `scripts/check_distributions.py` | Fresh-venv checks of the built wheel and installed test suite. |
+| `examples/divider.json` | Native circuit document with an independently known 8 V output. |
 | `.gitignore` | Excludes Python caches, virtual environments, test caches, and local environment files. |
 
 ## Requirements and setup
@@ -34,7 +41,7 @@ A small Python command-line tool for calculating equivalent resistance in series
   Windows and Linux. Newer versions are outside the current test matrix.
 - The formula CLI and circuit model need only the standard library. DC solving
   adds the optional NumPy dependency.
-- Version 0.1.0 is currently a local development package. Installation commands
+- Version 0.3.0 is currently a local development package. Installation commands
   below use this checkout; it has not been published to a package registry.
 
 Open a terminal in the project directory and check that Python is available:
@@ -163,8 +170,9 @@ python -m unittest -v
 ## Current limitations
 
 The menu still exposes only standalone formulas. The Python DC API below solves
-small linear networks of positive resistors and independent sources. GUI, file
-loading, controlled/reactive/nonlinear components and unit prefixes are not yet
+small linear networks of positive resistors and independent sources. The first
+desktop network editor is available below. Controlled/reactive/nonlinear
+components and unit prefixes are not yet
 implemented. Numerical policies and remaining limitations are recorded in
 [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
@@ -202,11 +210,86 @@ branch current, but loops of such sources are rejected as non-unique.
 See [ARCHITECTURE.md](ARCHITECTURE.md) for numerical limits and exact source-loop
 policy. This is a small-network DC engine, not a complete SPICE simulator.
 
+## Save, load and analyze circuit documents
+
+Native version-1 JSON stores the electrical circuit plus a title/description.
+It preserves component/node order, Unicode names and source polarity. Persistence
+needs only the standard library; solving also needs the `[dc]` extra.
+
+```python
+from circuit_io import CircuitDocument, save_document, load_document
+
+# `circuit` is the Circuit from the Python example above.
+document = CircuitDocument(circuit, title="Divider", description="12 V input")
+save_document(document, "my-circuit.json")
+restored = load_document("my-circuit.json")
+assert restored.circuit == circuit
+```
+
+Saving refuses to replace an existing path by default. Use `overwrite=True`
+explicitly when replacing your document. Saves install a completed temporary
+file atomically; default creation requires filesystem hard-link support.
+Malformed documents raise `CircuitFormatError`; filesystem failures retain
+their ordinary Python error types. Loading never executes expressions or resolves
+external files. See [CIRCUIT_FORMAT.md](CIRCUIT_FORMAT.md) for schema and size limits.
+
+Run the provided example from the checkout:
+
+```text
+python main.py dc examples/divider.json
+```
+
+With the package installed, use `circuit-calculator dc FILE.json` or
+`python -m main dc FILE.json`. Results contain node voltages, element voltages,
+currents and absorbed/delivered power with explicit unit labels, plus numerical
+diagnostics. The example gives `out = 8 V`, resistor current `0.004 A`, and source
+power `-0.048 W`. Output is JSON with full float precision. Errors go to stderr
+with exit code 1; invalid command arguments use code 2. The dense DC command
+accepts at most 200 unknowns (non-reference nodes plus voltage-source currents).
+Running without arguments still opens the original formula menu.
+
+## Desktop DC network editor (prototype)
+
+```text
+python main.py gui --example
+```
+
+Or, after installation, `circuit-calculator gui --example`. Omit `--example` to
+start with one empty junction. Tkinter/Tk must be installed with your Python
+distribution; some Linux distributions package it separately. Drawing/exporting
+needs no NumPy; simulation needs the `[dc]` extra. See [GUI_DESIGN.md](GUI_DESIGN.md)
+for the framework decision and supported scope.
+
+1. Choose **Junction** and click empty canvas space to place named junctions.
+2. Choose **Resistor**, **Voltage source**, or **Current source**, then click two
+   junctions in order and enter a name/value in base SI units. The first terminal
+   is node_a, plus, or from; the second is node_b, minus, or to.
+3. Choose **Wire** to join two existing junctions, and **Reference** to select the
+   zero-volt junction. Crossings, overlaps and proximity never create connections.
+4. Use **Select / move** to select components or drag junctions. **Edit value**,
+   **Delete**, **Undo/Redo** and Ctrl+Z/Ctrl+Y operate on the explicit topology.
+   Zoom with +/− and pan with scrollbars or the middle mouse button.
+5. Select **Simulate DC** or press F5. The example gives `out = 8 V`; results
+   include node voltages, branch currents/power and conservation diagnostics.
+   Edits clear results and stale worker results are discarded.
+
+**Open circuit** arranges a native JSON circuit automatically. **Export circuit**
+saves electrical connectivity and metadata; **layout is not saved**. Reopening
+resolves wire-connected nodes into nets and arranges them again. The editor
+warns before discarding unsaved work. Limits: 100 junctions, 200 components,
+400 wires and 200 DC unknowns. A wire that shorts both terminals of a component
+produces an explicit unsupported-short error.
+
+This is a junction-based prototype. Graphical-project save/load, independent
+component placement/rotation, wire segment routing/splitting and the complete
+schematic editor remain planned. The electrical model and solver stay independent
+of Tk and layout coordinates.
+
 ## Future roadmap
 
 The following are planned ideas and are **not implemented**:
 
-- Graphical circuit drawing.
+- Full schematic editing and graphical-project persistence beyond the network prototype.
 - Extended DC analysis with controlled sources and equivalent-port calculations.
 - RC and RLC circuit analysis.
 

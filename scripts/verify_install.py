@@ -41,7 +41,7 @@ import unittest
 folder = Path(sys.argv[1]).resolve()
 require_dc = sys.argv[2] == 'dc'
 environment = Path(sys.prefix).resolve()
-for name in ('calculations', 'circuit', 'dc', 'main'):
+for name in ('calculations', 'circuit', 'circuit_io', 'dc', 'main', 'schematic', 'gui'):
     spec = importlib.util.find_spec(name)
     if spec is None or not Path(spec.origin).resolve().is_relative_to(environment):
         raise RuntimeError('Module did not come from installed environment: ' + name)
@@ -53,6 +53,10 @@ print('Installed:', metadata['Name'], metadata['Version'], 'Python', sys.version
 if metadata['Requires-Python'] != '>=3.11':
     raise RuntimeError('Unexpected Python requirement')
 command = Path(sys.executable).parent / ('circuit-calculator.exe' if sys.platform == 'win32' else 'circuit-calculator')
+completed = subprocess.run([str(command), 'gui', '--help'], text=True, encoding='utf-8',
+                           capture_output=True, check=True, cwd=folder, timeout=30)
+if '--example' not in completed.stdout:
+    raise RuntimeError('Installed GUI command help missing')
 for argv in ([str(command)], [sys.executable, '-I', '-m', 'main']):
     completed = subprocess.run(argv, input='2\n1e-320\n\n6\n', text=True,
                                encoding='utf-8', capture_output=True, check=True,
@@ -61,7 +65,22 @@ for argv in ([str(command)], [sys.executable, '-I', '-m', 'main']):
         raise RuntimeError('Installed CLI failed: ' + completed.stdout)
 from circuit import Circuit, Resistor, VoltageSource
 from dc import solve_dc
+from circuit_io import CircuitDocument, save_document, load_document
 example = Circuit(('g', 'a'), (VoltageSource('V', 'a', 'g', 6), Resistor('R', 'a', 'g', 3)), 'g')
+document_path = folder / 'installed-example.json'
+save_document(CircuitDocument(example, 'Installed example'), document_path)
+if load_document(document_path).circuit != example:
+    raise RuntimeError('Installed persistence round trip failed')
+for argv in ([str(command), 'dc', str(document_path)],
+             [sys.executable, '-I', '-m', 'main', 'dc', str(document_path)]):
+    completed = subprocess.run(argv, text=True, encoding='utf-8', capture_output=True,
+                               cwd=folder, timeout=30)
+    if require_dc:
+        import json
+        if completed.returncode != 0 or abs(json.loads(completed.stdout)['node_voltages_volts']['a'] - 6) > 1e-12:
+            raise RuntimeError('Installed DC command failed: ' + completed.stderr)
+    elif completed.returncode != 1 or '[dc]' not in completed.stderr:
+        raise RuntimeError('Installed DC command did not report missing optional dependency')
 if not require_dc:
     try:
         solve_dc(example)

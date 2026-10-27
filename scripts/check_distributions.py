@@ -14,9 +14,14 @@ import venv
 
 def main():
     root = Path(__file__).resolve().parents[1]
-    wheels = list((root / 'dist').glob('*.whl'))
+    # Select the declared version so old, user-retained build artifacts cannot
+    # be mistaken for this release's wheel.
+    import tomllib
+    metadata = tomllib.loads((root / 'pyproject.toml').read_text(encoding='utf-8'))
+    version = metadata['project']['version']
+    wheels = list((root / 'dist').glob(f'circuit_calculator-{version}-*.whl'))
     if len(wheels) != 1:
-        raise RuntimeError('Expected exactly one wheel in dist; use a clean build directory')
+        raise RuntimeError(f'Expected exactly one wheel for version {version} in dist')
     scratch = root / '.build-check'
     scratch.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='environment-', dir=scratch) as folder:

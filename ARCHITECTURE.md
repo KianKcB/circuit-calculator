@@ -6,7 +6,20 @@ I/O; `circuit.py` owns immutable, validated electrical data. The new `dc.py` own
 linear DC assembly, topology checks, solution and results. None depends on a GUI.
 Future persistence and schematic layout must be separate clients of the model.
 
-Packaging declares those same four modules explicitly; their public import paths
+`circuit_io.py` is now the native persistence client. CircuitDocument owns title
+and description without changing Circuit. Strict version-1 JSON schema, numerical
+conversion rules, limits and save semantics are defined in CIRCUIT_FORMAT.md.
+The DC file command in main.py composes load -> size guard -> solve -> JSON
+presentation. Analysis limits do not prevent storing valid unsolvable descriptions.
+
+`schematic.py` now owns immutable layout/junction/wire state, explicit net
+resolution and revision-scoped undo/results. `gui.py` renders that state with Tk
+and invokes the existing DC solver on a worker thread. The UI thread alone
+updates widgets, and results are accepted only for the submitted revision.
+Native electrical export compiles wires into nets; graphical persistence is a
+separate future schema. See GUI_DESIGN.md for exact junction/crossing semantics.
+
+Packaging declares the seven product modules explicitly; their public import paths
 are preserved. The console command calls `main.main`, shared with direct script
 execution. Base installation is dependency-free; the dc extra supplies NumPy.
 See DEVELOPMENT.md for the >=3.11 installation floor and current CI target.

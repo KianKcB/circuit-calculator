@@ -34,6 +34,17 @@ are not available until the workflow has actually been committed/pushed and run.
   independent 100-digit Decimal power references; resistance invariants; CLI
   rejection of nonzero text that float parsing would silently turn into zero.
 - Model suite: immutable component parameters, names, nodes and reference.
+- Persistence suite: every element's round trip, normalized deterministic output,
+  metadata/Unicode, malformed and duplicate fields, numeric/type/range failures,
+  byte/depth/count limits, no-clobber/atomic replacement and failed-write cleanup.
+- DC command suite: preserved interactive menu, known-answer native-file JSON,
+  bad arguments/files/topology, missing NumPy advice and pre-solve size guard.
+- Editor logic suite: coordinates/crossings never connect, explicit wire
+  merge/split/cycles, source orientation, delete/undo/redo, bounded history,
+  revision-scoped result acceptance and analytical compiled-circuit results.
+- Opt-in Tk checks: `python -B scripts/check_gui.py -v` in a display session with
+  NumPy. Nine tests exercise canvas hit targets/movement, creation/edit errors,
+  reference/delete/undo, async success/failure/stale results, zoom and export/open.
 - DC assembly: explicit hand-written MNA matrix and RHS; topology errors.
 - DC solution: hand-derived divider, parallel, supernode, balanced/unbalanced
   bridges and multiple-source results. KCL at reference and other nodes,
@@ -54,6 +65,29 @@ Expected reference answers are derived independently and must not be changed to
 accommodate an implementation error.
 
 ## Latest local run: 2026-10-27
+
+GUI-1: 162 headless tests passed on Python 3.11.9 and 3.14.6; without site-packages,
+146 passed with 16 expected optional-NumPy skips. Nine opt-in Tk workflow tests
+passed on each interpreter. Visual inspection of the live editor identified and
+fixed vertical component-label overlap. Interactive preview changes made by the
+user were preserved; analytical DC results are verified by automated workflows,
+not claimed from a manual simulation screenshot.
+
+GUI-1 fresh installed checks on both interpreters passed 146 tests with 16
+expected skips in core-only mode, then all 162 with no skips under NumPy 2.4.6.
+Installed GUI help is exercised without importing Tk; interactive Tk checks remain
+the explicit local nine-test script, not a hosted CI claim. Wheel contents match
+the seven current product modules, and the source archive includes GUI design
+and widget-test scripts.
+
+PERSIST-1: Python 3.11.9 and 3.14.6 source runs each passed 144 tests. Without
+site-packages: 129 passed and 15 optional-NumPy tests skipped. This batch adds
+27 persistence tests and 7 command tests. The divider example executed through
+`python main.py dc examples/divider.json` with 8 V output, 4 mA resistor currents
+and zero reported KCL/power residuals. Fresh installed checks passed on both
+interpreters: 129 passed with 15 expected skips in core-only mode, then all 144
+with no skips under NumPy 2.4.6. These runs also exercised document save/load,
+both console/module DC commands, and pip dependency checks outside the checkout.
 
 PKG-1 on Windows: the unchanged 110-test source suite passed on Python 3.11.9
 and 3.14.6. Fresh installed wheels passed 97 tests with 13 expected skips in

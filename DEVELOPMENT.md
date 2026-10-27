@@ -10,7 +10,7 @@ The installable package requires Python >=3.11. Maintained CI targets CPython
 3.11-3.14 on Windows and Linux; other versions/platforms are not in the matrix.
 This replaces the previously unverified README Python 3.7 support claim. The
 existing flat imports and direct script execution remain supported. The current
-local package version is 0.1.0; no release or registry publication has occurred.
+local package version is 0.3.0; no release or registry publication has occurred.
 The project's license is still undecided; no license grant is invented by packaging.
 
 For source development on Windows:
@@ -42,8 +42,8 @@ python -m venv .venv-build
 python -B scripts/check_distributions.py
 ```
 
-Use an empty `dist/` before a new version build. The checker requires exactly one
-wheel to prevent accidentally testing a stale version. Build creates a source
+The checker selects the version declared in pyproject.toml and requires exactly
+one matching wheel, so older artifacts can remain in `dist/`. Build creates a source
 archive and then a wheel from that archive. The checker creates a temporary venv
 under ignored `.build-check/`, installs that exact local wheel with no dependency
 resolution, tests core-only behavior, installs its DC extra with constraints,
@@ -70,3 +70,17 @@ full suite. Record exact outcomes and limits. Stop at a coherent review checkpoi
 and update the next action in PROJECT_STATUS.md.
 
 Lint/type-check tooling remains deferred; stdlib unittest is the test runner.
+
+## GUI development
+
+Launch `python main.py gui --example` in a desktop session with Tkinter/Tk.
+Tk is optional in some Python distributions; install it using that distributor's
+instructions. NumPy remains optional until simulation. Keep editing/connectivity
+logic in schematic.py, rendering/dialogs in gui.py, and solver/math in dc.py.
+Read GUI_DESIGN.md before extending wiring or layout persistence.
+
+Run `python -B scripts/check_gui.py -v` for nine Tk widget/workflow checks with
+a display and NumPy available. These tests are opt-in: the regular 162-test suite
+remains headless and needs no Tk import. Hosted CI currently exercises editor
+logic and package imports, not the interactive Tk tests. A future display-enabled
+CI lane can run them without weakening the core/DC dependency boundary.

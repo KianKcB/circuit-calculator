@@ -1,9 +1,10 @@
 # Project status and continuation
 
-Date: 2026-10-27. DC-1 is committed as `2f4bbe9`; NUM-1 is committed as `8ce68fb`.
-The working tree was clean at the start of PKG-1. PKG-1 changes below are local
-and uncommitted; no commit or push was performed by the agent. Always recheck
-the working tree before continuing.
+Date: 2026-10-27. HEAD remains `341d094`. PERSIST-1 was already staged when
+GUI-1 began; its staged index has been preserved. GUI-1 additions/updates are
+unstaged, including overlapping files that now show MM/AM. No commit, push or
+index update was performed by the agent. Always inspect both staged and unstaged
+diffs before reviewing/committing this checkpoint.
 
 ## Initial audit
 
@@ -154,7 +155,8 @@ installation checks or large-scale benchmarks were added in this batch.
 
 ## Batch PKG-1: installation and CI foundation
 
-Status: local installation VERIFIED; hosted CI CONFIGURED, NOT YET RUN.
+Status: local installation VERIFIED, committed as `341d094`; hosted CI CONFIGURED
+(no hosted results recorded in this document).
 Base `8ce68fb`, no pre-existing uncommitted modifications. This batch adds:
 
 - `pyproject.toml`: explicit flat modules, version 0.1.0, Python >=3.11,
@@ -198,13 +200,118 @@ names remain for compatibility; a future namespace migration needs a separate
 plan. Local build artifacts and build venv are ignored. Temporary install-check
 venvs were removed by the check scripts after their runs.
 
+## Batch PERSIST-1: native documents and file-based DC workflow
+
+Status: VERIFIED locally, including fresh installed core-only and DC workflows.
+Base `341d094`, no pre-existing uncommitted modifications. No new dependency.
+Local package version is now 0.2.0; native document format is independently v1.
+
+- `circuit_io.py`: immutable CircuitDocument metadata, strict JSON loading and
+  deterministic serialization; byte/depth/node/element/string limits; Decimal
+  numeric parsing preserves underflow until model validation; no arbitrary code,
+  expressions, file references or unsupported fields/types are interpreted.
+- Atomic saves serialize before I/O, refuse existing destinations by default,
+  and require explicit overwrite=True for replacement. No-clobber install uses a
+  hard link; failures retain ordinary filesystem exceptions and clean temp files.
+- `main.py`: `dc FILE.json` composes load/size check/solve/JSON results. The
+  no-argument formula menu is preserved. Error exit codes and SI units are explicit;
+  200-unknown guard precedes dense matrix allocation.
+- `test_circuit_io.py` and `test_dc_cli.py`: 34 tests covering all-element/metadata
+  round trips, malformed/unknown/duplicate data, non-finite/range failures, resource
+  limits, Unicode, save preservation/replacement/failure cleanup, an independently
+  derived DC circuit, CLI errors and size-guard ordering.
+- `examples/divider.json`: 12 V across 1 kohm/2 kohm with expected 8 V output.
+- Package metadata includes the fifth module, manifest includes native examples,
+  and installed checks exercise load/save plus console/module DC commands. Wheel
+  selection now follows declared package version so retained 0.1 artifacts cannot
+  be tested in place of 0.2.
+- CIRCUIT_FORMAT.md is the full format/API/resource/save-semantics contract.
+  README, architecture, testing, roadmap and decisions are synchronized.
+
+Source commands after implementation: `python -B -m unittest -q` and
+`py -3.14 -B -m unittest -q`: **144 passed** on each interpreter. Without
+site-packages: `python -B -S -m unittest -q`: **129 passed, 15 expected skips**.
+`python -B main.py dc examples/divider.json` returned 8 V, 0.004 A and -0.048 W,
+with zero reported KCL and power-balance residuals. Syntax/whitespace checks pass.
+
+Fresh installed package checks: `python -B scripts/check_distributions.py` and
+`py -3.14 -B scripts/check_distributions.py` each passed **129 tests with 15
+expected skips** in core-only mode, then **all 144 with no skips** after adding
+NumPy 2.4.6. Both installed console and module DC commands and persistence APIs
+were exercised outside the checkout. Both environments passed `pip check`.
+`.venv-build/Scripts/python -m build` produced the 0.2.0 source archive and a
+wheel built from that archive. No hosted CI results are claimed for this batch.
+
+Limits: supports only existing R/V/I devices and metadata, not SPICE or schematic
+layout. Unknown format versions are rejected; no migration history yet exists.
+Default saves require hard-link support; replacement does not retain previous
+permissions/metadata or guarantee directory-fsync durability. Input limits are
+application policy, not a hostile-data service guarantee. Programmatic solver
+size policy remains unchanged. GUI/framework selection is the next milestone.
+
+## Batch GUI-1: Tk DC network editor prototype
+
+Status: headless logic, local Tk workflows and fresh installed workflows VERIFIED.
+The complete phase-6 schematic editor remains IN PROGRESS.
+Starts from staged PERSIST-1 over HEAD `341d094`; no unrelated changes detected.
+Package version is now 0.3.0; electrical file format remains v1.
+
+- GUI_DESIGN.md records Tk/PySide/wx comparison, source links, scope, limits,
+  explicit junction/crossing semantics and graphical-save limitations.
+- schematic.py owns immutable positions/wires plus the existing CircuitDocument,
+  explicit wire union into nets, bounded Undo/Redo and revision-scoped results.
+  Coordinates never create connections; moving nodes preserves endpoints;
+  delete removes incident topology; unsupported device shorts produce errors.
+- gui.py renders junctions and R/V/I symbols, explicit wires/reference, creation,
+  value editing, movement, deletion, Undo/Redo, pan/zoom and native circuit
+  import/export. Simulation uses one worker; widgets update on the Tk thread.
+  Edits invalidate results, and older-revision futures cannot display stale data.
+- `python main.py gui --example` / installed `circuit-calculator gui --example`
+  launches the prototype; F5 simulates. No-argument CLI and file DC commands remain.
+  Tk/display failures get clean command errors; NumPy is still optional until solve.
+- test_schematic.py adds 18 headless tests. scripts/check_gui.py adds nine opt-in
+  Tk workflow checks, separate from headless discovery. Package verification checks
+  both new modules and installed GUI help without requiring a display.
+- Existing model, solver mathematics and circuit-file schema are unchanged.
+
+Executed locally on Windows: source unittest suite **162 passed** on Python
+3.11.9 and 3.14.6; `python -B -S -m unittest -q`: **146 passed, 16 expected skips**.
+`python -B scripts/check_gui.py -q` and its Python 3.14 equivalent each passed
+**nine Tk workflow tests**. Tests cover creation/movement/reference/delete/undo,
+invalid values, async solve/error/stale completion, export/reopen and zoom hit
+selection. Analytical editor divider resolves to out=8 V and V1 power=-0.048 W.
+Visual inspection using the computer-use skill found overlapping vertical labels;
+labels were anchored outward and the refreshed window was inspected. User edits
+in the visible preview were left intact; manual screenshot-based solving is not
+claimed as evidence. GUI window is left available for the user.
+
+Limits: junction-based prototype, no free component placement/rotation or segment
+routing/splitting. Native export saves topology/metadata only, not coordinates,
+wire segmentation, view/history or selection. Reopen auto-arranges nodes. Default
+save protections remain; replacing a file requires an explicit GUI confirmation.
+Tk may need distributor installation; no new pip GUI dependency was added. Core
+CI covers editor logic and package command help; hosted interactive GUI testing,
+macOS, accessibility, performance and executable distribution remain unverified.
+The next batch is full graphical-project persistence, not a phase-6 completion claim.
+
+Installed validation: `python -B scripts/check_distributions.py` and
+`py -3.14 -B scripts/check_distributions.py` each passed **146 tests with 16
+expected skips** without NumPy, then **162 passed with no skips** using NumPy
+2.4.6. Both environments passed pip check, installed GUI command help, existing
+CLI/DC commands and editor topology tests. The wheel contains the seven current
+product modules; the source archive includes GUI design and widget-test scripts.
+`git diff --check` passed. No hosted GUI/CI execution is claimed.
+
 ## Exact next action
 
-Review PKG-1 as a coherent commit candidate. Suggested commit message:
-`Add installable package and CI for core and DC environments`.
-The user handles staging/commits/pushes.
+Review the staged PERSIST-1 changes and additional unstaged GUI-1 changes. Stage
+new GUI files and updated working-tree versions only after review. If committing
+them together, suggested message: `Add versioned circuit files and Tk DC editor prototype`.
+The user handles staging/commits/pushes. Existing staged files were not restaged
+or reset, and the current GUI additions will not be included by a staged-only commit.
 
-After pushing, inspect the first hosted workflow run before claiming CI is
-verified. Next development batch: native versioned JSON persistence with strict
-schema/type validation, deterministic round trips and malformed-input tests,
-followed by a DC CLI workflow before GUI work. See ROADMAP.md for long-term gates.
+Next batch: versioned schematic-project persistence independent of electrical v1
+files, preserving coordinates, explicit wire segments and view state with strict
+validation, atomic saves and graphical round-trip tests. Then expand toward free
+component placement/rotation and terminal-level wire routing. Inspect hosted CI
+separately after pushes; no remote CI result is claimed here.

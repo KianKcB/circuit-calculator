@@ -2,3 +2,4 @@ include *.md
 include requirements-*.txt constraints-ci.txt
 include test_*.py
 include scripts/*.py
+include examples/*.json
