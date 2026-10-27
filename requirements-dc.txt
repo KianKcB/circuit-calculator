@@ -1,0 +1,2 @@
+# Optional DC solver dependency. Verified locally with NumPy 1.26.4.
+numpy>=1.21,<3

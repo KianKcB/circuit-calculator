@@ -18,13 +18,19 @@ A small Python command-line tool for calculating equivalent resistance in series
 | --- | --- |
 | `main.py` | Interactive command-line menu and input/output handling. |
 | `calculations.py` | Series resistance, parallel resistance, and Ohm's law calculations and validation. |
+| `circuit.py` | Immutable validated resistor and independent-source circuit model. |
+| `dc.py` | Linear DC MNA assembly, solving, results and diagnostics. |
+| `test_dc.py` | Analytical reference circuits and solver failure tests. |
 | `test_calculations.py` | Unit tests for the calculations and CLI behavior. |
 | `.gitignore` | Excludes Python caches, virtual environments, test caches, and local environment files. |
 
 ## Requirements and setup
 
 - Python 3.7 or newer.
-- No third-party packages are required; the application and tests use the Python standard library.
+- The formula CLI and circuit model need only the standard library. DC solving
+  requires NumPy: `python -m pip install -r requirements-dc.txt`.
+- Locally verified with Python 3.11.9 and NumPy 1.26.4. The historical Python 3.7
+  minimum has not been tested in the current environment.
 
 Open a terminal in the project directory and check that Python is available:
 
@@ -32,7 +38,7 @@ Open a terminal in the project directory and check that Python is available:
 python --version
 ```
 
-There is no dependency installation step. On systems where the Python command is named `python3`, use `python3` in place of `python` in the commands below.
+For formula-only use there is no dependency installation step. On systems where the Python command is named `python3`, use `python3` in place of `python` in the commands below.
 
 ## Run the application
 
@@ -105,12 +111,53 @@ python -m unittest -v
 
 ## Current limitations
 
-The project supports these divider formulas for a selected resistor or branch, but it does not solve arbitrary interconnected circuit networks or calculate a complete circuit's node voltages and branch currents. It also does not calculate power distribution across a full circuit or convert unit prefixes. The CLI accepts plain numbers and interprets resistance in ohms, voltage in volts, current in amperes, and power in watts.
+The menu still exposes only standalone formulas. The Python DC API below solves
+small linear networks of positive resistors and independent sources. GUI, file
+loading, controlled/reactive/nonlinear components and unit prefixes are not yet
+implemented. Legacy formula extreme-number limitations are recorded in
+[PROJECT_STATUS.md](PROJECT_STATUS.md).
+
+## Linear DC analysis from Python
+
+```python
+from circuit import Circuit, Resistor, VoltageSource
+from dc import solve_dc
+
+circuit = Circuit(
+    nodes=("ground", "input", "output"),
+    elements=(
+        VoltageSource("V1", "input", "ground", 12),
+        Resistor("R1", "input", "output", 1000),
+        Resistor("R2", "output", "ground", 2000),
+    ),
+    reference_node="ground",
+)
+result = solve_dc(circuit)
+print(result.node_voltages["output"])       # approximately 8 V
+print(result.elements["R1"].current_amperes)  # approximately 0.004 A
+print(result.elements["V1"].power_watts)      # approximately -0.048 W
+```
+
+The reference is explicitly zero volts. Resistor current runs `node_a` to
+`node_b`; voltage-source current runs plus to minus; current-source current
+runs `from_node` to `to_node`. Terminal voltage follows the same ordering.
+Positive power is absorbed and negative power is delivered. Results are read-only.
+
+`assemble_dc` exposes the immutable MNA matrix and ordering without NumPy.
+`solve_dc` rejects missing reference, floating networks, conflicting or redundant
+voltage-source constraints, and unsafe numerical results through `DCError`
+subclasses. A zero-volt source can represent an ideal short with a measured
+branch current, but loops of such sources are rejected as non-unique.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for numerical limits and exact source-loop
+policy. This is a small-network DC engine, not a complete SPICE simulator.
 
 ## Future roadmap
 
 The following are planned ideas and are **not implemented**:
 
 - Graphical circuit drawing.
-- DC resistive circuit analysis using nodal and mesh methods.
+- Extended DC analysis with controlled sources and equivalent-port calculations.
 - RC and RLC circuit analysis.
+
+See [ROADMAP.md](ROADMAP.md) for phased dependencies, [TESTING.md](TESTING.md)
+for validation, and [PROJECT_STATUS.md](PROJECT_STATUS.md) for the next batch.
