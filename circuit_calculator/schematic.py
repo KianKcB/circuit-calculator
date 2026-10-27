@@ -1,14 +1,16 @@
 """GUI-independent junction editor state and explicit wire/net resolution."""
 
 from dataclasses import dataclass, replace
+from collections import Counter
 import math
 
 from circuit_calculator.circuit import Circuit, CurrentSource, Resistor, VoltageSource
 from circuit_calculator.circuit_io import CircuitDocument
 
-MAX_NODES = 100
+MAX_JUNCTIONS = 100
+MAX_NODES = 500
 MAX_ELEMENTS = 200
-MAX_WIRES = 400
+MAX_WIRES = 800
 
 
 def terminals(element):
@@ -66,24 +68,69 @@ class Wire:
 
 
 @dataclass(frozen=True)
+class ComponentPlacement:
+    element: str
+    x: float
+    y: float
+    rotation: int = 0
+
+    def __post_init__(self):
+        if not isinstance(self.element, str) or not self.element.strip():
+            raise ValueError('Placement element must be non-empty text')
+        Position(self.element, self.x, self.y)
+        if type(self.rotation) is not int or self.rotation not in (0, 90, 180, 270):
+            raise ValueError('Rotation must be an integer 0, 90, 180 or 270')
+
+    def terminal_coordinates(self):
+        dx, dy = {0: (60, 0), 90: (0, 60), 180: (-60, 0), 270: (0, -60)}[self.rotation]
+        return ((self.x - dx, self.y - dy), (self.x + dx, self.y + dy))
+
+
+def _next_id(prefix, used):
+    index = 1
+    while f'{prefix}{index}' in used:
+        index += 1
+    return f'{prefix}{index}'
+
+
+@dataclass(frozen=True)
 class Schematic:
     document: CircuitDocument
     positions: tuple
     wires: tuple = ()
+    placements: tuple = ()
 
     def __post_init__(self):
         if type(self.document) is not CircuitDocument:
             raise TypeError('Expected a CircuitDocument')
         circuit = self.document.circuit
-        positions, wires = tuple(self.positions), tuple(self.wires)
+        positions, wires, placements = tuple(self.positions), tuple(self.wires), tuple(self.placements)
         if len(circuit.nodes) > MAX_NODES or len(circuit.elements) > MAX_ELEMENTS or len(wires) > MAX_WIRES:
-            raise ValueError('Editor limit: 100 junctions, 200 components, 400 wires')
+            raise ValueError('Editor limit: 500 total nodes, 200 components, 800 wires')
         if not all(type(position) is Position for position in positions):
             raise TypeError('Positions must be Position values')
         if len(positions) != len(circuit.nodes) or {p.node for p in positions} != set(circuit.nodes):
             raise ValueError('Exactly one position is required per junction')
         for element in circuit.elements:
             terminals(element)
+        elements = {e.name: e for e in circuit.elements}
+        uses = Counter(node for e in circuit.elements for node in terminals(e))
+        position_map = {p.node: (p.x, p.y) for p in positions}
+        placed_names, owned = set(), set()
+        for placement in placements:
+            if type(placement) is not ComponentPlacement:
+                raise TypeError('Placements must be ComponentPlacement values')
+            if placement.element not in elements or placement.element in placed_names:
+                raise ValueError('Placements require unique existing component names')
+            placed_names.add(placement.element)
+            for node, coordinates in zip(terminals(elements[placement.element]), placement.terminal_coordinates()):
+                if uses[node] != 1:
+                    raise ValueError('Placed components require dedicated, unshared terminal nodes')
+                if position_map[node] != coordinates:
+                    raise ValueError('Terminal positions must agree with component placement geometry')
+                owned.add(node)
+        if len(circuit.nodes) - len(owned) > MAX_JUNCTIONS:
+            raise ValueError('Editor limit: 100 free junctions')
         names, pairs = set(), set()
         for wire in wires:
             if type(wire) is not Wire:
@@ -96,13 +143,14 @@ class Schematic:
             pairs.add(frozenset((wire.first, wire.second)))
         object.__setattr__(self, 'positions', positions)
         object.__setattr__(self, 'wires', wires)
+        object.__setattr__(self, 'placements', placements)
 
     @classmethod
     def from_document(cls, document):
         if type(document) is not CircuitDocument:
             raise TypeError('Expected a CircuitDocument')
-        if len(document.circuit.nodes) > MAX_NODES or len(document.circuit.elements) > MAX_ELEMENTS:
-            raise ValueError('Editor limit: 100 junctions, 200 components, 400 wires')
+        if len(document.circuit.nodes) > MAX_JUNCTIONS or len(document.circuit.elements) > MAX_ELEMENTS:
+            raise ValueError('Editor limit: 100 imported junctions, 200 components')
         return cls(document, tuple(Position(node, 140 + (i % 4) * 200, 140 + (i // 4) * 160)
                                    for i, node in enumerate(document.circuit.nodes)))
 
@@ -143,11 +191,88 @@ class Schematic:
     def _circuit(self, **changes):
         return replace(self.document, circuit=replace(self.document.circuit, **changes))
 
+    def terminal_owners(self):
+        elements = {e.name: e for e in self.document.circuit.elements}
+        return {node: p.element for p in self.placements for node in terminals(elements[p.element])}
+
+    def endpoint_label(self, node):
+        owner = self.terminal_owners().get(node)
+        if owner is None:
+            return node
+        element = next(e for e in self.document.circuit.elements if e.name == owner)
+        labels = ('a', 'b') if type(element) is Resistor else ('+', '−') if type(element) is VoltageSource else ('from', 'to')
+        return f'{owner}.{labels[terminals(element).index(node)]}'
+
+    def component_placement(self, name):
+        for placement in self.placements:
+            if placement.element == name:
+                return placement
+        positions = {p.node: p for p in self.positions}
+        pairs = Counter()
+        for element in self.document.circuit.elements:
+            a, b = terminals(element)
+            pair = frozenset((a, b))
+            index = pairs[pair]
+            pairs[pair] += 1
+            if element.name == name:
+                first, second = positions[a], positions[b]
+                dx, dy = second.x - first.x, second.y - first.y
+                length = math.hypot(dx, dy)
+                ux, uy = (dx / length, dy / length) if length else (1, 0)
+                return ComponentPlacement(name, (first.x + second.x) / 2 - uy * index * 48,
+                    (first.y + second.y) / 2 + ux * index * 48,
+                    (int(round(math.degrees(math.atan2(uy, ux)) / 90)) * 90) % 360)
+        raise ValueError('Select an existing component')
+
+    def add_placed_component(self, kind, name, x, y, value, rotation=0):
+        nodes = self.document.circuit.nodes
+        first = _next_id('terminal_', nodes)
+        second = _next_id('terminal_', (*nodes, first))
+        element = component(kind, name, first, second, value)
+        placement = ComponentPlacement(name, x, y, rotation)
+        points = tuple(Position(node, *coordinates) for node, coordinates in
+                       zip((first, second), placement.terminal_coordinates()))
+        return Schematic(self._circuit(nodes=(*nodes, first, second),
+                         elements=(*self.document.circuit.elements, element)),
+                         (*self.positions, *points), self.wires, (*self.placements, placement))
+
+    def place_component(self, name, x, y, rotation):
+        existing = next((e for e in self.document.circuit.elements if e.name == name), None)
+        if existing is None:
+            raise ValueError('Select an existing component')
+        placement = ComponentPlacement(name, x, y, rotation)
+        if name in {p.element for p in self.placements}:
+            points = dict(zip(terminals(existing), placement.terminal_coordinates()))
+            return replace(self,
+                positions=tuple(Position(p.node, *points[p.node]) if p.node in points else p for p in self.positions),
+                placements=tuple(placement if p.element == name else p for p in self.placements))
+        nodes = self.document.circuit.nodes
+        first = _next_id('terminal_', nodes)
+        second = _next_id('terminal_', (*nodes, first))
+        replacement = type(existing)(name, first, second, value_of(existing))
+        wires = list(self.wires)
+        for new_node, old_node in zip((first, second), terminals(existing)):
+            wires.append(Wire(_next_id('W', {w.name for w in wires}), new_node, old_node))
+        points = tuple(Position(node, *coordinates) for node, coordinates in
+                       zip((first, second), placement.terminal_coordinates()))
+        return Schematic(self._circuit(nodes=(*nodes, first, second),
+                         elements=tuple(replacement if e.name == name else e for e in self.document.circuit.elements)),
+                         (*self.positions, *points), tuple(wires), (*self.placements, placement))
+
+    def move_component(self, name, x, y):
+        return self.place_component(name, x, y, self.component_placement(name).rotation)
+
+    def rotate_component(self, name):
+        placement = self.component_placement(name)
+        return self.place_component(name, placement.x, placement.y, (placement.rotation + 90) % 360)
+
     def add_node(self, name, x, y):
         return Schematic(self._circuit(nodes=(*self.document.circuit.nodes, name)),
-                         (*self.positions, Position(name, x, y)), self.wires)
+                         (*self.positions, Position(name, x, y)), self.wires, self.placements)
 
     def move_node(self, name, x, y):
+        if name in self.terminal_owners():
+            raise ValueError('Move the component body; its terminals cannot move independently')
         if name not in self.document.circuit.nodes:
             raise ValueError('Unknown junction')
         return replace(self, positions=tuple(Position(name, x, y) if p.node == name else p
@@ -172,6 +297,8 @@ class Schematic:
     def delete(self, kind, name):
         circuit = self.document.circuit
         if kind == 'node':
+            if name in self.terminal_owners():
+                raise ValueError('Delete the component body; its terminals cannot be deleted independently')
             if name not in circuit.nodes:
                 raise ValueError('Unknown junction')
             if len(circuit.nodes) == 1:
@@ -181,8 +308,19 @@ class Schematic:
             reference = None if circuit.reference_node == name else circuit.reference_node
             return Schematic(self._circuit(nodes=nodes, elements=elements, reference_node=reference),
                              tuple(p for p in self.positions if p.node != name),
-                             tuple(w for w in self.wires if name not in (w.first, w.second)))
+                             tuple(w for w in self.wires if name not in (w.first, w.second)), self.placements)
         if kind == 'element' and name in {e.name for e in circuit.elements}:
+            if name in {p.element for p in self.placements}:
+                removed = set(terminals(next(e for e in circuit.elements if e.name == name)))
+                nodes = tuple(n for n in circuit.nodes if n not in removed)
+                if not nodes:
+                    raise ValueError('Add a junction before deleting the last component')
+                return Schematic(self._circuit(nodes=nodes,
+                    elements=tuple(e for e in circuit.elements if e.name != name),
+                    reference_node=None if circuit.reference_node in removed else circuit.reference_node),
+                    tuple(p for p in self.positions if p.node not in removed),
+                    tuple(w for w in self.wires if not removed.intersection((w.first, w.second))),
+                    tuple(p for p in self.placements if p.element != name))
             return replace(self, document=self._circuit(elements=tuple(e for e in circuit.elements if e.name != name)))
         if kind == 'wire' and name in {w.name for w in self.wires}:
             return replace(self, wires=tuple(w for w in self.wires if w.name != name))
@@ -249,3 +387,8 @@ def divider_example():
                      (Position('g', 160, 420), Position('in', 160, 160),
                       Position('out', 500, 160), Position('return', 500, 420)),
                      (Wire('W1', 'return', 'g'),))
+
+
+def placed_divider_example():
+    return (divider_example().place_component('V1', 160, 290, 90)
+            .place_component('R1', 330, 160, 0).place_component('R2', 500, 290, 90))

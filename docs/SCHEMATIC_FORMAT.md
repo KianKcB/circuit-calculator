@@ -1,4 +1,4 @@
-# Schematic project format v1 and GUI-2 contract
+# Schematic project format v2, with v1 loading
 
 Date: 2026-10-27. A separate UTF-8 JSON document preserves editor state without
 changing native electrical circuit format v1. File suffix: `.ccproj.json`.
@@ -6,11 +6,12 @@ changing native electrical circuit format v1. File suffix: `.ccproj.json`.
 ```text
 {
   "format": "circuit-calculator-project",
-  "version": 1,
+  "version": 2,
   "document": <complete native electrical document v1, before wire resolution>,
   "layout": {
     "positions": [{"node": "g", "x": 160.0, "y": 420.0}, ...],
-    "wires": [{"name": "W1", "first": "return", "second": "g"}, ...]
+    "wires": [{"name": "W1", "first": "return", "second": "g"}, ...],
+    "placements": [{"element": "R1", "x": 330.0, "y": 160.0, "rotation": 0}, ...]
   },
   "view": {"zoom": 1.0, "scroll_x": 0.0, "scroll_y": 0.0}
 }
@@ -23,15 +24,16 @@ as numbers and nonzero values lost to float underflow. No expressions, external
 files or executable models are evaluated. Reuse a shared bounded JSON/atomic-file
 implementation with native circuit persistence so their safety rules cannot drift.
 
-The embedded document stores original junction identities and uncompiled R/V/I
+The embedded document stores original node/terminal identities and uncompiled R/V/I
 endpoints, reference selection, title and description. Loading validates the
 existing CircuitDocument, Schematic, Position and Wire rules without invoking a
 solver or compiling wires. Valid unfinished/floating/shorted editor states can be
 saved even when DC analysis would reject them. There is no duplicate compiled
 network to synchronize, and no cached result is trusted from disk.
 
-Limits: 1,048,576 UTF-8 bytes, nesting depth 16, 100 junctions, 200 components and
-400 wires. Exactly one position per declared node; all wire endpoints declared;
+Limits: 1,048,576 UTF-8 bytes, nesting depth 16, 100 free junctions, 200 components,
+500 total nodes including dedicated terminals, and 800 wires. Exactly one position
+per declared node; all wire endpoints declared;
 wire names and unordered endpoint pairs unique. Wire names/endpoints are at most
 256 Unicode characters. Coordinates are finite and within +/-100000. Export
 normalizes coordinates to floats. Zoom is in [0.4, 2.5]; scroll fractions are in
@@ -39,6 +41,26 @@ normalizes coordinates to floats. Zoom is in [0.4, 2.5]; scroll fractions are in
 window/viewport size may clamp fractions to keep the view inside its scroll region;
 Tk also quantizes scrolling to pixel boundaries.
 View numbers round to normal floats, with no arbitrary epsilon acceptance.
+
+Every v2 layout requires `placements`, including an empty array for a wholly
+junction-based graph. Each record has exactly element/x/y/rotation; element is a
+unique existing component name, at most 256 characters. Rotation must be an integer
+0, 90, 180 or 270 (clockwise). Coordinates follow the position numeric rules.
+The placed component owns its two terminal nodes: no other element may use them
+directly; wires may connect to them. Terminal positions must exactly match the
+center plus/minus 60 world units on the rotated axis. No tolerance repairs or
+coordinate-inferred connectivity are performed. See COMPONENT_EDITING.md.
+
+## Version compatibility
+
+The loader accepts v1's original shape with only positions/wires in layout, at
+most 100 nodes and 400 wires. It preserves the original graph/geometry with an
+empty placement list; it does not convert components on load. V1 rejects a
+placements field. Unsupported versions are errors. All new saves use v2, even
+if there are no placements. Older application versions cannot read v2; keep an
+original v1 file or use Save As when compatibility with an older application is
+needed. Native electrical import/export remains format v1 and contains no layout.
+The existing v1 divider fixture is retained alongside a separate v2 placed example.
 
 APIs in project_io.py: frozen ViewState and SchematicProject containers,
 `dumps_project` / `loads_project`, `save_project` / `load_project`.
@@ -68,5 +90,7 @@ Acceptance: exact state/metadata/view round trips and deterministic output,
 malformed/version/type/numeric/resource cases, no-clobber and failed-write cleanup,
 save/load/compile/solve equivalence, GUI save/reopen/dirty/cancel/failure workflows,
 stale-result rejection across document boundaries, and fresh installed API/CLI
-checks. Bump local package to 0.4.0; both file format versions remain 1. No new
-devices, solver changes, free component placement or wire-routing behavior.
+checks. GUI-3 additionally verifies rotation/movement preserve terminal identity,
+source polarity and compile/solve equivalence, strict placement geometry, v1
+loading and v2 output. Local package is 0.5.0; native electrical format remains v1.
+No new devices or solver algorithms are added; wires remain straight connections.

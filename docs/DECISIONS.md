@@ -1,5 +1,27 @@
 # Decisions
 
+## 2026-10-27: GUI-3 dedicated terminals and project v2
+
+Store ComponentPlacement in Schematic, keeping geometry out of Circuit and the DC
+solver. Two stable dedicated nodes per placed R/V/I symbol allow independent body
+movement and rotation while wires retain their endpoint identities. Validate the
+terminal positions against the center/rotation to avoid competing geometry truths.
+Use exact quarter-turn offsets, avoiding trigonometric drift over four rotations.
+Coincident coordinates never merge nets; terminals connect only through wires.
+
+Retain junction-based components without eagerly changing old projects. Their first
+body move/rotation creates dedicated terminals wired to the original endpoints.
+This preserves compiled node names and signed-source behavior; one Undo restores
+the exact original state. Terminals cannot move/delete independently. Deleting a
+body removes its terminals/incident wires and clears its reference if necessary.
+
+Project v2 requires layout.placements and supports 500 total nodes/800 wires,
+while retaining 100 free junctions/200 elements. Keep v1 loading (100 nodes/400
+wires) and existing fixtures; save v2 only. Older applications reject v2, so Save As
+can retain a v1 original. Native electrical format remains v1; package becomes
+0.5.0. See COMPONENT_EDITING.md and SCHEMATIC_FORMAT.md. No new dependencies,
+devices, analysis algorithms or automatic wire-routing/splitting are introduced.
+
 ## 2026-10-27: GUI-2 schematic-project persistence
 
 SCHEMATIC_FORMAT.md records the format/design contract. Embed original junction

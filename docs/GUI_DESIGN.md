@@ -1,4 +1,4 @@
-# Desktop GUI decision and GUI-1 contract
+# Desktop GUI decision and incremental editor contracts
 
 Date: 2026-10-27. Phase 6 begins with a bounded network editor; the complete
 schematic editor remains incremental. Existing staged PERSIST-1 work is preserved.
@@ -24,8 +24,10 @@ Sources: [Python Tkinter](https://docs.python.org/3/library/tkinter.html),
 
 ## Electrical editing rules
 
-Nodes are explicit named junctions, with positions stored separately. A component
-is created by choosing two existing junction identities in order. Those choices
+Nodes are explicit identities, with positions stored separately. GUI-3 adds
+independently placed component bodies with dedicated terminal nodes, body dragging
+and clockwise 90° rotation. See COMPONENT_EDITING.md for the current contract.
+The original component creation method chooses two free junctions in order. Those choices
 are node_a/node_b for resistors, plus/minus for voltage sources, and from/to for
 current sources. Symbols and result signs follow that same order.
 
@@ -60,13 +62,14 @@ networks, not cancellation of arbitrary long numerical jobs.
 
 Native v1 circuit files preserve electrical connectivity and metadata only.
 Export resolves wires into nets; importing one arranges junctions automatically.
-GUI-2 now adds a separate project v1 format that preserves original junctions,
-coordinates, individual wires, metadata, zoom and pan. History, tool/selection and
+GUI-2 added project v1; GUI-3 saves project v2 and continues to load v1. It preserves
+original junctions, coordinates, symbol placements, individual wires, metadata,
+zoom and pan. History, tool/selection and
 simulation results are not saved. Open/Save Project and Import/Export Circuit are
 distinct controls. See SCHEMATIC_FORMAT.md for strict schema/save semantics.
 
-This is a junction-based prototype. Free component placement/rotation,
-multi-segment wire routing, automatic segment splitting,
+Free component placement/rotation and explicit terminal wiring are verified in
+GUI-3. Multi-segment wire routing, automatic segment splitting,
 copy/paste and the complete phase-6 workflow remain planned. Do not mark phase 6
 complete. Tests must cover topology independent of geometry, net merge/split,
 orientation, delete/undo, stale-result rejection, analytical export/load/solve

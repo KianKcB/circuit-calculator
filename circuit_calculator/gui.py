@@ -1,4 +1,4 @@
-"""Tk junction-based DC editor. Tk is imported only when the GUI is launched."""
+"""Tk schematic DC editor. Tk is imported only when the GUI is launched."""
 
 from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal, InvalidOperation
@@ -25,6 +25,9 @@ class CircuitEditor:
         self.project_path = Path(project_path).resolve() if project_path is not None else None
         self.mode, self.pending, self.selected = 'select', None, None
         self.drag_node = None
+        self.drag_element = None
+        self.drag_offset = (0, 0)
+        self.drag_origin = (0, 0)
         self.zoom = 1.0
         self.dirty = False
         self.future = None
@@ -48,9 +51,9 @@ class CircuitEditor:
                                ('Save As', self.save_project_as), ('Import circuit', self.open),
                                ('Export circuit', self.export),
                                ('Undo', self.undo), ('Redo', self.redo),
-                               ('Edit value', self.edit_value), ('Delete', self.delete),
+                               ('Edit value', self.edit_value), ('Rotate 90°', self.rotate), ('Delete', self.delete),
                                ('Simulate DC', self.simulate)):
-            parent = edit_actions if label in ('Undo', 'Redo', 'Edit value', 'Delete', 'Simulate DC') else actions
+            parent = edit_actions if label in ('Undo', 'Redo', 'Edit value', 'Rotate 90°', 'Delete', 'Simulate DC') else actions
             button = ttk.Button(parent, text=label, command=command)
             button.pack(side='left', padx=2)
             self.buttons[label] = button
@@ -64,7 +67,7 @@ class CircuitEditor:
                             command=self.change_mode).pack(side='left', padx=5)
         ttk.Button(tools, text='−', width=3, command=lambda: self.change_zoom(.8)).pack(side='right')
         ttk.Button(tools, text='+', width=3, command=lambda: self.change_zoom(1.25)).pack(side='right')
-        self.status = tk.StringVar(value='Choose Junction to place nodes, then connect two nodes with a component.')
+        self.status = tk.StringVar(value='Choose a component tool, click empty space, then connect its terminal dots with Wire.')
         ttk.Label(root, textvariable=self.status, padding=(14, 7), wraplength=1100).pack(fill='x')
         body = ttk.Panedwindow(root, orient='horizontal')
         body.pack(fill='both', expand=True, padx=12, pady=(0, 8))
@@ -86,13 +89,15 @@ class CircuitEditor:
         self.results = tk.Text(panel, width=34, wrap='word', relief='flat', bg='white',
                                padx=10, pady=10, state='disabled', font=('Consolas', 10))
         self.results.pack(fill='both', expand=True, pady=8)
-        ttk.Label(root, text='Connect explicit junctions. Crossings and proximity do not connect. '
+        ttk.Label(root, text='Wire terminal dots or junctions explicitly. Crossings and proximity do not connect. '
                   'Project saves include layout; circuit exports contain electrical connections only.',
                   padding=(14, 6), foreground='#526477', wraplength=1100).pack(fill='x')
         self.canvas.bind('<Button-1>', self.click)
         self.canvas.bind('<B1-Motion>', self.motion)
         self.canvas.bind('<ButtonRelease-1>', self.release)
         self.canvas.bind('<Double-Button-1>', lambda event: self.edit_value())
+        self.canvas.bind('<Key-r>', lambda event: self.rotate())
+        self.canvas.bind('<Key-R>', lambda event: self.rotate())
         self.canvas.bind('<ButtonPress-2>', lambda event: self.canvas.scan_mark(event.x, event.y))
         self.canvas.bind('<B2-Motion>', self._pan)
         root.bind('<Escape>', lambda event: self.cancel())
@@ -142,10 +147,12 @@ class CircuitEditor:
     def change_mode(self):
         self.mode = self.tool.get()
         self.pending = None
+        self.drag_node = self.drag_element = None
         self.status.set('Click empty space to place a junction.' if self.mode == 'node' else
-                        'Select a junction for the zero-volt reference.' if self.mode == 'ground' else
-                        'Select and drag junctions; double-click a component to edit its value.' if self.mode == 'select' else
-                        'Click two junctions in order. First is + / from / node_a; second is − / to / node_b.')
+                        'Select a terminal or junction for the zero-volt reference.' if self.mode == 'ground' else
+                        'Select and drag a component body or junction. R rotates the selected component.' if self.mode == 'select' else
+                        'Click two terminal or junction dots to connect a wire.' if self.mode == 'wire' else
+                        'Click empty space to place a component, or select two free junctions in terminal order.')
         self.draw()
 
     def cancel(self):
@@ -180,9 +187,10 @@ class CircuitEditor:
                 if tag.startswith('entity:'):
                     _, kind, name = tag.split(':', 2)
                     hits.append((kind, name))
-        return next((hit for hit in hits if hit[0] == 'node'), hits[0] if hits else None)
+        return next((hit for hit in hits if hit[0] in ('node', 'terminal')), hits[0] if hits else None)
 
     def click(self, event):
+        self.canvas.focus_set()
         hit = self._hit(event)
         try:
             if self.mode == 'node':
@@ -197,15 +205,29 @@ class CircuitEditor:
             elif self.mode == 'select':
                 self.selected = hit
                 self.drag_node = hit[1] if hit and hit[0] == 'node' else None
+                self.drag_element = hit[1] if hit and hit[0] == 'element' else None
+                if self.drag_element:
+                    placement = self.session.state.component_placement(self.drag_element)
+                    self.drag_origin = (event.x, event.y)
+                    self.drag_offset = (self.canvas.canvasx(event.x) / self.zoom - placement.x,
+                                        self.canvas.canvasy(event.y) / self.zoom - placement.y)
                 self.draw()
-            elif hit and hit[0] == 'node':
+            elif self.mode in ('resistor', 'voltage', 'current') and not hit:
+                self.pending = None
+                self._create_component(None, None, position=(
+                    round(self.canvas.canvasx(event.x) / self.zoom / 20) * 20,
+                    round(self.canvas.canvasy(event.y) / self.zoom / 20) * 20))
+            elif hit and hit[0] in ('node', 'terminal'):
                 name = hit[1]
                 if self.mode == 'ground':
                     self._apply(self.session.state.set_reference(name))
-                    self.status.set(f'Reference junction: {name}.')
+                    self.status.set(f'Reference: {self.session.state.endpoint_label(name)}.')
+                elif hit[0] == 'terminal' and self.mode != 'wire':
+                    self.pending = None
+                    self.status.set('Use Wire to connect an existing component terminal.')
                 elif self.pending is None:
                     self.pending = name
-                    self.status.set(f'First terminal: {name}. Choose the second junction.')
+                    self.status.set(f'First endpoint: {self.session.state.endpoint_label(name)}. Choose another terminal or junction.')
                     self.draw()
                 else:
                     first, self.pending = self.pending, None
@@ -221,7 +243,7 @@ class CircuitEditor:
             self._error(error)
         self.draw()
 
-    def _create_component(self, first, second):
+    def _create_component(self, first, second, *, position=None):
         from tkinter import simpledialog
         prefix = {'resistor': 'R', 'voltage': 'V', 'current': 'I'}[self.mode]
         used = {e.name for e in self.session.state.document.circuit.elements}
@@ -232,10 +254,24 @@ class CircuitEditor:
         value = simpledialog.askstring('Component', f'Value in {unit}:', initialvalue='1000' if self.mode == 'resistor' else '1', parent=self.root)
         if value is None:
             return
-        self._apply(self.session.state.add_element(component(self.mode, name, first, second, Decimal(value))))
-        self.status.set(f'Added {name}: {first} → {second}.')
+        if position is None:
+            state = self.session.state.add_element(component(self.mode, name, first, second, Decimal(value)))
+        else:
+            state = self.session.state.add_placed_component(self.mode, name, *position, Decimal(value))
+        self._apply(state)
+        self.status.set(f'Added {name}. Use Wire to connect its terminal dots.')
+
+    def _drag_position(self, event):
+        return (round((self.canvas.canvasx(event.x) / self.zoom - self.drag_offset[0]) / 20) * 20,
+                round((self.canvas.canvasy(event.y) / self.zoom - self.drag_offset[1]) / 20) * 20)
 
     def motion(self, event):
+        if self.drag_element:
+            try:
+                self.draw(schematic=self.session.state.move_component(self.drag_element, *self._drag_position(event)))
+            except (ValueError, TypeError) as error:
+                self._error(error)
+                self.draw()
         if self.drag_node:
             try:
                 position = Position(self.drag_node, round(self.canvas.canvasx(event.x) / self.zoom / 20) * 20,
@@ -246,6 +282,17 @@ class CircuitEditor:
                 self.draw()
 
     def release(self, event):
+        if self.drag_element:
+            name, self.drag_element = self.drag_element, None
+            try:
+                placement = self.session.state.component_placement(name)
+                position = self._drag_position(event)
+                distance = math.hypot(event.x - self.drag_origin[0], event.y - self.drag_origin[1])
+                if distance > 3 and position != (placement.x, placement.y):
+                    self._apply(self.session.state.move_component(name, *position))
+            except (ValueError, TypeError) as error:
+                self._error(error)
+            self.draw()
         if self.drag_node:
             name, self.drag_node = self.drag_node, None
             try:
@@ -256,8 +303,8 @@ class CircuitEditor:
                 self._error(error)
                 self.draw()
 
-    def draw(self, preview=None):
-        canvas, state = self.canvas, self.session.state
+    def draw(self, preview=None, *, schematic=None):
+        canvas, state = self.canvas, schematic or self.session.state
         canvas.delete('all')
         positions = {p.node: (p.x * self.zoom, p.y * self.zoom) for p in state.positions}
         if preview:
@@ -272,6 +319,7 @@ class CircuitEditor:
             canvas.create_line(*positions[wire.first], *positions[wire.second], fill=color,
                                 width=3, tags=(f'entity:wire:{wire.name}',))
         pairs = {}
+        placed = {p.element: p for p in state.placements}
         for element in state.document.circuit.elements:
             a, b = terminals(element)
             pair = frozenset((a, b))
@@ -284,6 +332,11 @@ class CircuitEditor:
             px, py = -uy, ux
             offset = index * 48 * self.zoom
             cx, cy = (x1 + x2) / 2 + px * offset, (y1 + y2) / 2 + py * offset
+            if element.name in placed:
+                placement = placed[element.name]
+                cx, cy = placement.x * self.zoom, placement.y * self.zoom
+                ux, uy = {0: (1, 0), 90: (0, 1), 180: (-1, 0), 270: (0, -1)}[placement.rotation]
+                px, py = -uy, ux
             radius = 21 * self.zoom
             start, end = (cx - ux * radius, cy - uy * radius), (cx + ux * radius, cy + uy * radius)
             tag = (f'entity:element:{element.name}',)
@@ -312,15 +365,17 @@ class CircuitEditor:
                                         arrow='last', fill=color, width=2, tags=tag)
                     unit = 'A'
             canvas.create_text(cx + px * 38 * self.zoom, cy + py * 38 * self.zoom,
-                                text=f'{element.name}  {value_of(element):g} {unit}\n{a} → {b}',
+                                text=f'{element.name}  {value_of(element):g} {unit}\n{state.endpoint_label(a)} → {state.endpoint_label(b)}',
                                 anchor=('e' if px < 0 else 'w') if abs(px) > .6 else ('s' if py < 0 else 'n'),
                                 fill=color, font=('Segoe UI', 9), tags=tag)
+        owners = state.terminal_owners()
         for node, (x, y) in positions.items():
-            tag = (f'entity:node:{node}',)
-            selected = self.selected == ('node', node) or self.pending == node
+            kind = 'terminal' if node in owners else 'node'
+            tag = (f'entity:{kind}:{node}',)
+            selected = self.selected == (kind, node) or self.pending == node
             color = '#b25b10' if selected else '#173b61'
             canvas.create_oval(x - 6, y - 6, x + 6, y + 6, fill=color, outline='white', width=2, tags=tag)
-            canvas.create_text(x + 12, y - 13, text=node, anchor='w', fill=color,
+            canvas.create_text(x + 12, y - 13, text=state.endpoint_label(node), anchor='w', fill=color,
                                 font=('Segoe UI', 10, 'bold'), tags=tag)
             if state.document.circuit.reference_node == node:
                 canvas.create_line(x, y + 7, x, y + 18, fill=color, width=2, tags=tag)
@@ -346,6 +401,7 @@ class CircuitEditor:
     def _history_changed(self, before):
         if self.session.revision != before:
             self.selected = self.pending = None
+            self.drag_node = self.drag_element = None
             self._text('Results cleared after Undo/Redo. Run Simulate DC again.')
             self.draw()
             self._update_dirty()
@@ -365,9 +421,21 @@ class CircuitEditor:
             except (TypeError, ValueError, InvalidOperation) as error:
                 self._error(error)
 
+    def rotate(self):
+        if not self.selected or self.selected[0] != 'element':
+            self.status.set('Select a component body to rotate it.')
+            return
+        try:
+            self._apply(self.session.state.rotate_component(self.selected[1]))
+            self.status.set('Rotated 90° clockwise. Terminal identities and connections are preserved.')
+        except (ValueError, TypeError) as error:
+            self._error(error)
+
     def delete(self):
         if self.selected:
             try:
+                if self.selected[0] == 'terminal':
+                    raise ValueError('Select the component body to delete it; terminals belong to the component')
                 state = self.session.state.delete(*self.selected)
                 self.selected = self.pending = None
                 self._apply(state)
@@ -387,7 +455,7 @@ class CircuitEditor:
     def _reset_document(self, state, view=None, path=None):
         self.session.reset(state)
         self.project_path = Path(path).resolve() if path is not None else None
-        self.selected = self.pending = self.drag_node = None
+        self.selected = self.pending = self.drag_node = self.drag_element = None
         self.tool.set('select')
         self.mode = 'select'
         self._restore_view(view or ViewState())
@@ -426,7 +494,7 @@ class CircuitEditor:
         try:
             project = load_project(path)
             self._reset_document(project.schematic, project.view, path)
-            self.status.set('Project opened with its junction layout, wires and view.')
+            self.status.set('Project opened with its symbol layout, terminals, wires and view.')
         except (ValueError, TypeError, OSError) as error:
             self._error(error)
 
@@ -444,7 +512,7 @@ class CircuitEditor:
             self.project_path = Path(path).resolve()
             self._clean_project = project
             self._update_dirty()
-            self.status.set('Project saved, including layout, wires, metadata and view.')
+            self.status.set('Project saved, including symbols, terminals, wires, metadata and view.')
             return True
         except (ValueError, TypeError, OSError) as error:
             self._error(error)
@@ -517,7 +585,7 @@ class CircuitEditor:
                 return
             mapping = self.session.state.net_names()
             lines = ['Node voltages (V)']
-            lines += [f'{node}: {result.node_voltages[net]:.9g}' for node, net in mapping.items()]
+            lines += [f'{self.session.state.endpoint_label(node)}: {result.node_voltages[net]:.9g}' for node, net in mapping.items()]
             lines += ['', 'Components (V, A, W)']
             for name, value in result.elements.items():
                 lines += [name, f'  V {value.voltage_volts:.9g}', f'  I {value.current_amperes:.9g}',

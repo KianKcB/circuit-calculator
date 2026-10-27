@@ -1,0 +1,166 @@
+{
+  "document": {
+    "circuit": {
+      "elements": [
+        {
+          "minus_node": "terminal_2",
+          "name": "V1",
+          "plus_node": "terminal_1",
+          "type": "voltage_source",
+          "voltage_volts": 12.0
+        },
+        {
+          "name": "R1",
+          "node_a": "terminal_3",
+          "node_b": "terminal_4",
+          "resistance_ohms": 1000.0,
+          "type": "resistor"
+        },
+        {
+          "name": "R2",
+          "node_a": "terminal_5",
+          "node_b": "terminal_6",
+          "resistance_ohms": 2000.0,
+          "type": "resistor"
+        }
+      ],
+      "nodes": [
+        "g",
+        "in",
+        "out",
+        "return",
+        "terminal_1",
+        "terminal_2",
+        "terminal_3",
+        "terminal_4",
+        "terminal_5",
+        "terminal_6"
+      ],
+      "reference_node": "g"
+    },
+    "format": "circuit-calculator",
+    "metadata": {
+      "description": "",
+      "title": "12 V divider"
+    },
+    "version": 1
+  },
+  "format": "circuit-calculator-project",
+  "layout": {
+    "placements": [
+      {
+        "element": "V1",
+        "rotation": 90,
+        "x": 160.0,
+        "y": 290.0
+      },
+      {
+        "element": "R1",
+        "rotation": 0,
+        "x": 330.0,
+        "y": 160.0
+      },
+      {
+        "element": "R2",
+        "rotation": 90,
+        "x": 500.0,
+        "y": 290.0
+      }
+    ],
+    "positions": [
+      {
+        "node": "g",
+        "x": 160.0,
+        "y": 420.0
+      },
+      {
+        "node": "in",
+        "x": 160.0,
+        "y": 160.0
+      },
+      {
+        "node": "out",
+        "x": 500.0,
+        "y": 160.0
+      },
+      {
+        "node": "return",
+        "x": 500.0,
+        "y": 420.0
+      },
+      {
+        "node": "terminal_1",
+        "x": 160.0,
+        "y": 230.0
+      },
+      {
+        "node": "terminal_2",
+        "x": 160.0,
+        "y": 350.0
+      },
+      {
+        "node": "terminal_3",
+        "x": 270.0,
+        "y": 160.0
+      },
+      {
+        "node": "terminal_4",
+        "x": 390.0,
+        "y": 160.0
+      },
+      {
+        "node": "terminal_5",
+        "x": 500.0,
+        "y": 230.0
+      },
+      {
+        "node": "terminal_6",
+        "x": 500.0,
+        "y": 350.0
+      }
+    ],
+    "wires": [
+      {
+        "first": "return",
+        "name": "W1",
+        "second": "g"
+      },
+      {
+        "first": "terminal_1",
+        "name": "W2",
+        "second": "in"
+      },
+      {
+        "first": "terminal_2",
+        "name": "W3",
+        "second": "g"
+      },
+      {
+        "first": "terminal_3",
+        "name": "W4",
+        "second": "in"
+      },
+      {
+        "first": "terminal_4",
+        "name": "W5",
+        "second": "out"
+      },
+      {
+        "first": "terminal_5",
+        "name": "W6",
+        "second": "out"
+      },
+      {
+        "first": "terminal_6",
+        "name": "W7",
+        "second": "return"
+      }
+    ]
+  },
+  "version": 2,
+  "view": {
+    "scroll_x": 0.0,
+    "scroll_y": 0.0,
+    "zoom": 1.0
+  }
+}

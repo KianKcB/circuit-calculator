@@ -76,7 +76,7 @@ class ProjectTests(unittest.TestCase):
     def test_root_and_version_validation(self):
         for value in (None, [], 1, 'project'):
             self.reject(value, 'object')
-        for version in (True, 1.0, '1', None, 0, 2):
+        for version in (True, 1.0, '1', None, 0, 3):
             value = data()
             value['version'] = version
             self.reject(value, 'version')
@@ -161,7 +161,7 @@ class ProjectTests(unittest.TestCase):
             elif change == 'not_array':
                 value['layout']['wires'] = 'wire'
             else:
-                value['layout']['wires'] *= 401
+                value['layout']['wires'] *= 801
             with self.subTest(change=change):
                 self.reject(value)
 

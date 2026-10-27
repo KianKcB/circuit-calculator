@@ -20,7 +20,7 @@ import tkinter as tk
 from circuit_calculator.circuit_io import load_document
 from circuit_calculator.dc import solve_dc
 from circuit_calculator.gui import CircuitEditor
-from circuit_calculator.schematic import divider_example
+from circuit_calculator.schematic import Wire, divider_example
 from circuit_calculator.project_io import load_project, save_project, SchematicProject
 
 
@@ -95,6 +95,110 @@ class TkWorkflowTests(unittest.TestCase):
         self.assertEqual(self.app.session.state.document.circuit.elements[-1].name, 'R3')
         self.assertIsNone(self.app.pending)
         self.assertTrue(self.app.canvas.find_withtag('entity:element:R3'))
+
+    def place_resistor(self):
+        self.mode('resistor')
+        with patch('tkinter.simpledialog.askstring', side_effect=['R3', '3000']):
+            self.app.click(self.point(800, 300))
+        self.mode('select')
+        return self.app.session.state.document.circuit.elements[-1]
+
+    def test_blank_placement_terminal_wiring_and_reference(self):
+        element = self.place_resistor()
+        self.assertEqual(self.app.session.state.component_placement('R3').rotation, 0)
+        self.assertEqual(self.app._hit(self.node(element.node_a)), ('terminal', element.node_a))
+        self.mode('wire')
+        self.app.click(self.node(element.node_a))
+        self.app.click(self.node('out'))
+        wire = self.app.session.state.wires[-1]
+        self.assertEqual((wire.first, wire.second), (element.node_a, 'out'))
+        self.mode('ground')
+        self.app.click(self.node(element.node_b))
+        self.assertEqual(self.app.session.state.document.circuit.reference_node, element.node_b)
+        self.assertIn('R3.b', self.app.status.get())
+        self.mode('resistor')
+        with patch('tkinter.simpledialog.askstring') as dialog:
+            self.app.click(self.node(element.node_a))
+            dialog.assert_not_called()
+        self.assertIn('Use Wire', self.app.status.get())
+
+    def test_body_drag_rotate_undo_and_invalid_drag(self):
+        self.place_resistor()
+        self.app._apply(self.app.session.state.add_wire(Wire('W2', 'terminal_1', 'out')))
+        original = self.app.session.state
+        self.app.click(self.point(800, 300))
+        self.assertEqual(self.app.selected, ('element', 'R3'))
+        self.app.motion(self.point(840, 340))
+        self.assertEqual(self.app.session.state, original, 'Preview must not create history')
+        self.app.release(self.point(840, 340))
+        moved = self.app.session.state
+        self.assertEqual(moved.compile(), original.compile())
+        self.assertEqual((moved.component_placement('R3').x, moved.component_placement('R3').y), (840, 340))
+        self.app.rotate()
+        self.assertEqual(self.app.session.state.component_placement('R3').rotation, 90)
+        self.assertEqual(self.app.session.state.compile(), original.compile())
+        self.app.undo()
+        self.assertEqual(self.app.session.state, moved)
+        self.app.undo()
+        self.assertEqual(self.app.session.state, original)
+        self.app.redo()
+        self.app.click(self.point(840, 340))
+        self.app.motion(self.point(880, 380))
+        self.app.release(self.point(100_100, 380))
+        self.assertEqual(self.app.session.state, moved)
+
+    def test_legacy_rotation_preserves_dc_and_one_step_undo(self):
+        original = self.app.session.state
+        self.app.selected = ('element', 'V1')
+        self.app.rotate()
+        state = self.app.session.state
+        self.assertEqual(state.compile(), original.compile())
+        self.assertEqual(len(state.wires), len(original.wires) + 2)
+        self.app.simulate()
+        self.wait_for_result()
+        self.assertIn('out: 8', self.app.results.get('1.0', 'end'))
+        self.assertIn('V1.+', self.app.results.get('1.0', 'end'))
+        self.app.undo()
+        self.assertEqual(self.app.session.state, original)
+
+    def test_selecting_off_grid_body_does_not_move_or_convert_it(self):
+        original = self.app.session.state
+        placement = original.component_placement('R1')
+        point = self.point(placement.x, placement.y)
+        self.app.click(point)
+        self.assertEqual(self.app.selected, ('element', 'R1'))
+        self.app.release(point)
+        self.assertEqual(self.app.session.state, original)
+        self.assertFalse(self.app.dirty)
+
+    def test_terminal_delete_protected_and_body_delete_cleans_owned_nodes(self):
+        element = self.place_resistor()
+        self.app.selected = ('terminal', element.node_a)
+        before = self.app.session.state
+        self.app.delete()
+        self.assertEqual(self.app.session.state, before)
+        self.assertIn('component body', self.app.status.get())
+        self.app.selected = ('element', 'R3')
+        self.app.delete()
+        self.assertNotIn(element.node_a, self.app.session.state.document.circuit.nodes)
+        self.app.undo()
+        self.assertEqual(self.app.session.state, before)
+
+    def test_placed_project_save_and_reopen(self):
+        self.place_resistor()
+        self.app.selected = ('element', 'R3')
+        self.app.rotate()
+        path = self.project_path()
+        with patch('tkinter.filedialog.asksaveasfilename', return_value=str(path)):
+            self.assertTrue(self.app.save_project())
+        expected = self.app.session.state
+        self.app.rotate()
+        with patch('tkinter.filedialog.askopenfilename', return_value=str(path)), \
+             patch('tkinter.messagebox.askyesnocancel', return_value=False):
+            self.app.open_project()
+        self.assertEqual(self.app.session.state, expected)
+        self.assertFalse(self.app.dirty)
+        self.assertTrue(self.app.canvas.find_withtag('entity:terminal:terminal_1'))
 
     def test_rejected_edit_leaves_document_unchanged(self):
         original = self.app.session.state

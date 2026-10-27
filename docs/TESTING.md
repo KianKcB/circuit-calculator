@@ -48,11 +48,17 @@ are not available until the workflow has actually been committed/pushed and run.
 - Editor logic suite: coordinates/crossings never connect, explicit wire
   merge/split/cycles, source orientation, delete/undo/redo, bounded history,
   revision-scoped result acceptance and analytical compiled-circuit results.
+- Component editing suite: dedicated terminal allocation/ownership, four rotations,
+  attached-wire invariants, legacy conversion for R/V/I, invalid geometry and
+  limit rollback, deletion/reference cleanup, exact Undo, strict v1/v2 project
+  compatibility and analytical placed-divider results.
 - Opt-in Tk checks: `python -B scripts/check_gui.py -v` in a display session with
-  NumPy. Eighteen tests exercise canvas hit targets/movement, creation/edit errors,
+  NumPy. Twenty-four tests exercise canvas hit targets/movement, creation/edit errors,
   reference/delete/undo, async success/failure/stale results, zoom and export/open,
   graphical save/reopen/view state, cancellation, failed saves/loads, dirty-state
-  restoration and stale completion across document boundaries.
+  restoration and stale completion across document boundaries; blank placement,
+  terminal wiring/reference, body drag/rotate, click-only selection, legacy
+  conversion/Undo, terminal deletion protection and placed-project reopening.
 - DC assembly: explicit hand-written MNA matrix and RHS; topology errors.
 - DC solution: hand-derived divider, parallel, supernode, balanced/unbalanced
   bridges and multiple-source results. KCL at reference and other nodes,
@@ -73,6 +79,18 @@ Expected reference answers are derived independently and must not be changed to
 accommodate an implementation error.
 
 ## Latest local run: 2026-10-27
+
+GUI-3: all 199 headless tests passed on Python 3.11.9 and 3.14.6. Without
+site-packages, 181 passed with 18 expected optional-NumPy skips. All 24 opt-in Tk
+workflow tests passed on each interpreter. Movement/rotation preserve the divider's
+8 V output and -0.048 W source power; strict v1 loading/v2 output, 500-node limits
+and failed-edit rollback are covered. The placed-divider window was also visually
+inspected for terminal labels and toolbar layout; keyboard rotation, Undo and
+simulation were exercised. Fresh wheel checks on both interpreters passed 181
+tests with 18 expected skips without NumPy, then all 199 under NumPy 2.4.6.
+Installed commands/import aliases, placed-project round trips, dependency checks
+and editable imports passed. Wheel modules match the source; source archives
+include the new design/tests/example. No hosted CI result is claimed.
 
 GUI-2: 185 headless tests passed on Python 3.11.9 and 3.14.6; without site-packages,
 168 passed with 17 expected optional-NumPy skips. All 18 Tk workflow tests passed

@@ -13,13 +13,17 @@ conversion rules, limits and save semantics are defined in CIRCUIT_FORMAT.md.
 The DC file command in cli.py composes load -> size guard -> solve -> JSON
 presentation. Analysis limits do not prevent storing valid unsolvable descriptions.
 
-`schematic.py` now owns immutable layout/junction/wire state, explicit net
+`schematic.py` now owns immutable layout/junction/wire/component-placement state, explicit net
 resolution and revision-scoped undo/results. `gui.py` renders that state with Tk
 and invokes the existing DC solver on a worker thread. The UI thread alone
 updates widgets, and results are accepted only for the submitted revision.
 Native electrical export compiles wires into nets; graphical persistence is a
-separate version-1 schema in project_io.py. It embeds the original uncompiled
-CircuitDocument, junction positions, individual wires and a ViewState.
+separate version-2 schema in project_io.py, with version-1 loading retained. It
+embeds the original uncompiled CircuitDocument, node positions, individual wires,
+ComponentPlacement values and a ViewState. Dedicated component terminal nodes keep
+their identity through movement/rotation; coordinates never determine connectivity.
+Legacy shared-junction elements acquire dedicated terminals and explicit wires
+on their first body move/rotation. See COMPONENT_EDITING.md for invariants.
 _document_io.py shares bounded JSON and atomic-file primitives between both file
 formats. Circuit I/O exposes validated data adapters for embedding without
 relaxing its existing schema. See SCHEMATIC_FORMAT.md and GUI_DESIGN.md.

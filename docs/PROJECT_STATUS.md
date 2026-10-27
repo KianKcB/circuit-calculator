@@ -1,9 +1,10 @@
 # Project status and continuation
 
-Date: 2026-10-27. REORG-1 was committed as `992fbac`; GUI-2 began with a
-clean working tree. Current GUI-2 changes are local and uncommitted; no staging,
-commit, push or branch operation was performed. Package version is now 0.4.0;
-electrical document v1 and the new schematic-project v1 are separate formats.
+Date: 2026-10-27. GUI-2 was committed as `f68462d`; GUI-3 began with a
+clean working tree. Current GUI-3 changes are local and uncommitted; no staging,
+commit, push or branch operation was performed. Package version is now 0.5.0;
+electrical document v1 and schematic-project v2 are separate formats. Project-v1
+loading remains supported.
 Use README and DEVELOPMENT.md for current package paths/commands; historical
 batch entries below retain their original snapshot names and results.
 
@@ -409,15 +410,76 @@ across different window sizes is promised. Shared atomic saves retain hard-link
 requirements and directory-fsync durability limits. No hosted GUI/CI run, macOS
 GUI check, project-version migration or backend change is claimed.
 
+## Batch GUI-3: independent symbol placement, movement and rotation
+
+Status: source, Tk, project compatibility and fresh wheel/editable checks VERIFIED
+locally. Phase 6 as a whole remains in progress.
+
+Base `f68462d`, initially clean, no unrelated modifications or new dependencies.
+Design/compatibility contract: COMPONENT_EDITING.md, with schema in
+SCHEMATIC_FORMAT.md and rationale in DECISIONS.md.
+
+- schematic.py adds immutable ComponentPlacement and two dedicated terminal nodes
+  per placed R/V/I symbol. Coordinates/rotation are validated together; terminals
+  remain stable through body movement and clockwise quarter-turn rotation. Wires
+  keep their endpoint identities; overlapping geometry never connects electrically.
+- Legacy junction-based components retain their representation on loading. First
+  body movement/rotation allocates terminals with two explicit wires back to the
+  original nodes. Compiled names, source polarity and DC results are preserved.
+  One Undo restores the exact previous graph. Body deletion cleans owned nodes,
+  incident wires and reference; terminals cannot move/delete independently.
+- GUI tools place components on empty space or retain two-free-junction creation.
+  Wire/Reference accept terminal dots. Body drag has a nonmutating preview and
+  commits one history entry; click-only selection does not snap/convert a symbol.
+  Rotate 90° and canvas R/R-shift shortcuts preserve connections. Labels/results
+  show component terminal names rather than generated internal node identifiers.
+- project_io.py saves strict v2 placements, loads v1 unchanged, and rejects invalid
+  ownership/geometry/rotation. Existing v1 fixtures remain unchanged; the separate
+  examples/placed-divider.ccproj.json is a v2 editable example. Native electrical
+  import/export remains v1. Limits: 100 free junctions, 200 components, 500 total
+  nodes, 800 wires; v1 input retains 100 nodes/400 wires. DC guard stays 200 unknowns.
+- Fourteen headless tests and six Tk workflow tests cover geometry/topology,
+  signed-source conversion, four rotations, deletion, exact Undo, limit rollback,
+  strict migration, placement/wiring/drag/rotate and graphical reopen. Installed
+  smoke checks now round-trip a placed/rotated project.
+
+Executed source checks: Python 3.11.9 and 3.14.6 each passed **199 tests**.
+`python -B -S -m unittest -q`: **181 passed, 18 expected optional-NumPy skips**.
+Both interpreters passed **24 opt-in Tk workflow tests**. The analytical placed
+divider retains **8 V output**, **-0.048 W source power** and balanced total power
+after movement/rotation/save/load. Live placed-divider layout inspected using the
+computer-use skill; terminal labels, polarity and toolbar controls were visible.
+The live keyboard-R rotation retained attached wires, Ctrl+Z restored the layout,
+and F5 displayed 8 V / -0.048 W with zero reported KCL/power residuals. The preview
+was left open at the original saved layout; no example file was overwritten.
+
+Fresh package checks on Python 3.11.9 and 3.14.6 each passed **181 tests with 18
+expected skips** in core-only mode and **199 with no skips** under NumPy 2.4.6.
+Both passed pip check, canonical/legacy command and module-identity checks,
+placed/rotated project save/load, and editable source imports outside the checkout.
+Commands: `python -B scripts/check_distributions.py` and the `py -3.14` equivalent.
+An isolated build produced the 0.5.0 source archive and wheel. Wheel application
+modules match the checkout byte-for-byte; the source archive includes the new
+design/tests/example. Python syntax, local Markdown links and `git diff --check`
+passed; native circuit/model/solver/formula files and existing v1 fixtures are
+unchanged. No hosted CI result is claimed.
+
+Limits: straight wires only, no segment routing/splitting, automatic connection,
+copy/paste, rename or multi-selection. A bare starting n1 junction must be wired
+or deleted before solving another network. New saves require a v2-capable app;
+Save As retains an original v1 copy. At least one node must remain after deleting
+a body. Geometry edits conservatively clear simulation results. No hosted CI or
+cross-platform GUI validation is claimed. The complete phase-6 milestone remains
+in progress.
+
 ## Exact next action
 
-Review GUI-2 as a coherent commit candidate. Suggested commit message:
-`Add schematic project save and reopen workflows`.
+Review GUI-3 as a coherent commit candidate.
+Suggested commit message: `Add independent component placement and rotation`.
 The user handles staging/commits/pushes; the index has not been changed.
 
-Next batch: specify and implement component-centric placement/rotation and
-explicit terminal-level wire connections. Preserve native electrical v1 and
-existing project-v1 loading; if the graphical schema must evolve, define a
-version/migration policy before writing it. Extend connectivity/Undo/GUI tests
-and add a display-enabled CI lane when practical. The full phase-6 editor is
-still in progress; do not treat graphical persistence alone as completion.
+Next batch: specify multi-segment wire geometry and explicit segment splitting
+with junction creation, preserving terminal identities and crossing/proximity
+semantics. Decide schema compatibility before changing it; extend net merge/split,
+Undo and Tk routing tests. Add a display-enabled CI lane when practical, and
+inspect hosted CI evidence after a user push. Do not mark phase 6 complete yet.
