@@ -33,6 +33,12 @@ schematic.py. The conversion simplifies duplicate and between-collinear points,
 preserves reversals/endpoints and uses normal wire validation for bend limits.
 Routing preferences and handle/drag selection stay in gui.py, outside persistence.
 See BEND_EDITING.md; the graphical schema remains v3.
+Canvas symbols/labels/selection handles now live in canvas_renderer.py; gui.py
+delegates drawing and owns controller actions/workers. The renderer tags actual
+circuit graphics separately from decoration. viewport.py supplies pure zoom,
+fit and scroll arithmetic; no Tk/NumPy is imported by these modules at import time.
+Fit uses measured graphic/text bounds, and camera actions preserve world center
+and numerical results. See VIEWPORT.md for bounds and compatibility semantics.
 _document_io.py shares bounded JSON and atomic-file primitives between both file
 formats. Circuit I/O exposes validated data adapters for embedding without
 relaxing its existing schema. See SCHEMATIC_FORMAT.md and GUI_DESIGN.md.

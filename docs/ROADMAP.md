@@ -12,7 +12,7 @@ direction; research items require a separate feasibility decision.
 | 3 Linear DC | VERIFIED for documented small-network subset | MNA, node voltages, all branch currents/power, topology and numerical diagnostics. Analytical examples and conservation tests required. No claim of arbitrary-range or large-network reliability. |
 | 4 Advanced DC | NOT STARTED | Controlled sources, wires/zero-ohm contraction, equivalent ports, superposition, floating-subnetwork policy and broader conditioning study; depend on phase 3. Each needs independent references and uniqueness tests. |
 | 5 Persistence/netlists | VERIFIED for native JSON v1 | Metadata, deterministic round trips, strict size/schema validation and atomic no-clobber saves pass source and installed tests. SPICE/text netlist interoperability remains future work. |
-| 6 First GUI | IN PROGRESS | GUI-5 adds bend handles/insertion/removal and optional right-angle drawing/conversion. Placement, explicit split/join, safe files and async results remain available. Project v3 is unchanged. Broader editing, navigation and usability remain incremental. See BEND_EDITING.md. |
+| 6 First GUI | IN PROGRESS | GUI-6 separates Canvas rendering, adds measured Fit Circuit and center-preserving zoom/reset/resize. Bend/placement/routing/file workflows remain available; project v3 is unchanged. Broader editing and usability remain incremental. See VIEWPORT.md. |
 | 7 Results/visualization | IN PROGRESS | Structured DC API/JSON command and Tk node/branch results implemented. GUI formats values for display without changing numerical results. SI prefixes, CSV, plots and schematic result annotations remain planned. |
 | 8 Dynamic model | NOT STARTED | Capacitors, inductors, initial conditions and analysis-specific steady-state rules; validate constitutive laws before AC/transient. |
 | 9 AC | NOT STARTED | Complex MNA, phasor convention, frequency sweeps and Bode plots; depends on phase 8. Gate: analytical RC/RL/RLC references and limiting cases. |
@@ -24,14 +24,14 @@ direction; research items require a separate feasibility decision.
 | 15 SPICE interoperability | NOT STARTED | Selected syntax and external benchmark suite; backend/version/license review first. Reject unsupported directives and document model differences. |
 | 16 Specialized analysis | DEFERRED | Small-signal, noise, pole-zero, distortion, multiport, thermal and transmission-line features each require a separate mathematical specification and references. |
 | 17 Research extensions | DEFERRED | Mixed-signal, RF/distributed, multiphysics, fitting, optimization, plugins and external APIs; feasibility and maintenance assessment before approval. |
-| 18 Distribution/maintenance | IN PROGRESS | Local package 0.7.0 retains project v3 and v1/v2 loading. CI configured; hosted evidence pending. Publishing, licensing, releases, benchmarks and broader migrations remain planned. |
+| 18 Distribution/maintenance | IN PROGRESS | Local package 0.8.0 retains project v3 and v1/v2 loading. CI configured; hosted evidence pending. Publishing, licensing, releases, benchmarks and broader migrations remain planned. |
 
 ## Next reviewable batches
 
 1. Inspect first hosted CI run after the user pushes; local package checks are complete.
-2. Complete GUI-5 verification and commit the bend-editing batch.
-3. Improve viewport navigation/fit and broaden display-enabled CI coverage, then
-   continue scoped schematic editing workflows without weakening connectivity rules.
+2. Complete GUI-6 verification/commit; GUI-5 is committed as 0087d36.
+3. Add CSV results export with exact values/units and stale-result protection,
+   then broaden display-enabled CI coverage. Keep input documents protected.
 
 PERSIST-1/GUI-1 are committed as c4a13dd and REORG-1 as 992fbac. GUI-2 project
 persistence is committed as f68462d, GUI-3 as c0951d8, and GUI-4 as 9dc4c4c.

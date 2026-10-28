@@ -46,7 +46,7 @@ progress and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for development commands
   Windows and Linux. Newer versions are outside the current test matrix.
 - The formula CLI and circuit model need only the standard library. DC solving
   adds the optional NumPy dependency.
-- Version 0.7.0 is currently a local development package. Installation commands
+- Version 0.8.0 is currently a local development package. Installation commands
   below use this checkout; it has not been published to a package registry.
 
 Open a terminal in the project directory and check that Python is available:
@@ -283,6 +283,8 @@ for the framework decision and supported scope.
    clockwise and preserves terminal identities, source signs and attached wires.
    **Edit value**, **Delete**, **Undo/Redo** and Ctrl+Z/Ctrl+Y operate on the topology.
    Zoom with +/− and pan with scrollbars or the middle mouse button.
+   **Fit circuit** (F on the canvas) fits the symbols, wires and labels;
+   **100%** resets magnification. Zoom and resizing retain the viewed world center.
 5. Select **Simulate DC** or press F5. The example gives `out = 8 V`; results
    include node voltages, branch currents/power and conservation diagnostics.
    Edits clear results and stale worker results are discarded.
@@ -348,6 +350,9 @@ The electrical model and solver stay independent of Tk and layout coordinates.
 See [COMPONENT_EDITING.md](docs/COMPONENT_EDITING.md) for geometry and migration rules.
 See [WIRE_ROUTING.md](docs/WIRE_ROUTING.md) for routing, splitting and crossing rules.
 See [BEND_EDITING.md](docs/BEND_EDITING.md) for bend handles and right-angle routing.
+See [VIEWPORT.md](docs/VIEWPORT.md) for camera behavior. Scroll bounds now follow
+the circuit rather than the decorative grid; older project scroll fractions may
+show a different view, while electrical data and layout coordinates are preserved.
 
 ## Future roadmap
 

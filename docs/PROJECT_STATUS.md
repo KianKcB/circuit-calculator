@@ -1,9 +1,9 @@
 # Project status and continuation
 
-Date: 2026-10-28. GUI-4 was committed as `9dc4c4c`; GUI-5 began with a
+Date: 2026-10-28. GUI-5 was committed as `0087d36`; GUI-6 began with a
 clean working tree and no unrelated changes. The user has now authorized staging
 and committing completed local batches; pushing remains a separate action.
-Package version is now 0.7.0;
+Package version is now 0.8.0;
 electrical document v1 and schematic-project v3 are separate formats. Project-v1/v2
 loading remains supported.
 Use README and DEVELOPMENT.md for current package paths/commands; historical
@@ -542,7 +542,7 @@ Phase 6 remains in progress.
 ## Batch GUI-5: bend editing and optional right-angle routing
 
 Status: source, Tk, fresh wheel/editable installation and visual checks VERIFIED
-locally; batch prepared for an authorized local commit.
+locally; committed as `0087d36`.
 
 Base `9dc4c4c`, initially clean. BEND_EDITING.md defines scope and acceptance.
 No electrical model/solver/device changes, dependencies or format migrations.
@@ -582,8 +582,46 @@ Limits: no obstacle avoidance, persistent orthogonal constraint or automatic
 rerouting during movement. All edits retain existing endpoint/net identities.
 Package 0.7.0, project v3, native electrical v1. Hosted CI remains unverified.
 
+## Batch GUI-6: measured viewport and renderer separation
+
+Status: source, real Tk, fresh wheel/editable installation and visual checks
+VERIFIED locally; ready for an authorized local commit.
+
+Base `0087d36`, initially clean. VIEWPORT.md records requirements and camera
+compatibility. No graph/device/solver changes, dependencies or schema migration.
+
+- canvas_renderer.py contains the existing symbols, labels, dots, wires and bend
+  handles. gui.py delegates drawing while retaining editing, dialogs and workers.
+  Tagged circuit content excludes grid, handles and previews from fit/scroll bounds.
+- viewport.py supplies independently tested fit/zoom/scroll arithmetic with explicit
+  type/range/nonfinite failures. Fit remeasures readable fixed-size labels, respects
+  existing zoom limits and reports when scrolling is still needed. 100% and plus/
+  minus zoom preserve the viewed world center; resize does too.
+- Scroll bounds permit centering every part of the circuit. Lazy actual Tk size
+  realization is reconciled without dirtying a clean initial view or losing saved
+  camera input. A cancellation regression caught this and remains covered.
+  Camera actions retain current numerical results and geometry history.
+- Seven headless and seven mapped Tk tests cover math/import boundaries, actual
+  label/content visibility, zoom/reset/resize center, signed/extreme layouts,
+  selection/preview exclusion, graph/result invariants and saved-camera round trips.
+  Fresh installation checks also verify origins of both new modules.
+
+Source: **233 tests passed** on Python 3.11.9 and 3.14.6; without site-packages,
+**213 passed, 20 expected NumPy skips**. Both interpreters passed **49 Tk tests**.
+Fresh core-only installs on both interpreters passed **213 tests with 20 expected
+skips**, then **233 with no skips** under NumPy 2.4.6. Both new modules resolve
+inside the fresh environment; import/command compatibility, pip check and editable
+source imports passed. A live routed project was fully fitted with readable labels.
+Static extraction review preserved all 14 Canvas creation sites; drawing remains
+covered by the existing editing/solver/file workflows. Build/format version: 0.8.0/v3.
+
+Limits: existing 0.4–2.5 zoom range can require scrolling for very large circuits.
+View fractions remain v3 leading fractions, but older renderer bounds can produce
+a different camera view. Graph/layout and existing fixture files remain unchanged.
+No hosted CI result claimed. Phase 6 remains in progress.
+
 ## Exact next action
 
-Commit GUI-5 using explicit paths, then continue viewport navigation/Fit to Circuit
-and display-enabled CI coverage. Keep geometry
-and connectivity separate; no push is authorized. Phase 6 remains in progress.
+Commit GUI-6 with explicit paths. Next add CSV results
+export with exact values/units, input-file protection and stale-result guards;
+then add display-enabled CI coverage. No push is authorized.

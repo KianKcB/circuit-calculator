@@ -11,6 +11,8 @@ from circuit_calculator.schematic import (EditorSession, Position, Schematic, Wi
                        component, divider_example, terminals, value_of, orthogonal_bends)
 from circuit_calculator.project_io import (SchematicProject, ViewState, load_project,
                                           save_project as write_project)
+from .canvas_renderer import render_schematic
+from .viewport import clamp_zoom, fit_zoom, scroll_region, scroll_fraction
 
 
 class CircuitEditor:
@@ -31,6 +33,8 @@ class CircuitEditor:
         self.drag_offset = (0, 0)
         self.drag_origin = (0, 0)
         self.zoom = 1.0
+        self._canvas_size = None
+        self._initial_view = project.view if project is not None else None
         self.dirty = False
         self.future = None
         self.worker = ThreadPoolExecutor(max_workers=1, thread_name_prefix='circuit-dc')
@@ -65,6 +69,10 @@ class CircuitEditor:
         self.horizontal_first = True
         ttk.Checkbutton(actions, text='Right-angle wires', variable=self.orthogonal,
                         command=self.routing_style_changed).pack(side='right', padx=8)
+        for label, command in (('Fit circuit', self.fit_circuit), ('100%', lambda: self.set_zoom(1))):
+            button = ttk.Button(header, text=label, command=command)
+            button.pack(side='right', padx=3)
+            self.buttons[label] = button
         tools = ttk.Frame(root, padding=(10, 0, 10, 8))
         tools.pack(fill='x')
         self.tool = tk.StringVar(value='select')
@@ -110,6 +118,9 @@ class CircuitEditor:
         self.canvas.bind('<BackSpace>', lambda event: self.remove_bend())
         self.canvas.bind('<Delete>', lambda event: self.delete())
         self.canvas.bind('<space>', self.toggle_route_order)
+        self.canvas.bind('<Key-f>', lambda event: self.fit_circuit())
+        self.canvas.bind('<Key-F>', lambda event: self.fit_circuit())
+        self.canvas.bind('<Configure>', self._canvas_resized)
         self.canvas.bind('<Motion>', self.route_motion)
         self.canvas.bind('<ButtonPress-2>', lambda event: self.canvas.scan_mark(event.x, event.y))
         self.canvas.bind('<B2-Motion>', self._pan)
@@ -128,10 +139,13 @@ class CircuitEditor:
         self._update_dirty()
 
     def _snapshot(self):
+        self._ensure_viewport()
         return SchematicProject(self.session.state,
                                 ViewState(self.zoom, self.canvas.xview()[0], self.canvas.yview()[0]))
 
     def _restore_view(self, view):
+        if self._canvas_size is None:
+            self._initial_view = view
         self.zoom = view.zoom
         self.draw()
         self.root.update_idletasks()
@@ -510,102 +524,93 @@ class CircuitEditor:
                 self.draw()
 
     def draw(self, preview=None, *, schematic=None):
-        canvas, state = self.canvas, schematic or self.session.state
-        previous_region = canvas.cget('scrollregion')
-        canvas.delete('all')
-        positions = {p.node: (p.x * self.zoom, p.y * self.zoom) for p in state.positions}
-        if preview:
-            positions[preview.node] = (preview.x * self.zoom, preview.y * self.zoom)
-        # Grid dots are decorative; only entity-tagged dots are electrical nodes.
-        for x in range(0, 1600, 40):
-            for y in range(0, 1200, 40):
-                canvas.create_oval(x * self.zoom, y * self.zoom, x * self.zoom + 1, y * self.zoom + 1,
-                                   fill='#dce5ee', outline='')
-        for wire in state.wires:
-            color = '#b25b10' if self.selected == ('wire', wire.name) else '#448269'
-            path = (positions[wire.first], *((p.x * self.zoom, p.y * self.zoom) for p in wire.bends), positions[wire.second])
-            canvas.create_line(*(v for point in path for v in point), fill=color,
-                                width=3, tags=(f'entity:wire:{wire.name}',))
-        pairs = {}
-        placed = {p.element: p for p in state.placements}
-        for element in state.document.circuit.elements:
-            a, b = terminals(element)
-            pair = frozenset((a, b))
-            index = pairs.get(pair, 0)
-            pairs[pair] = index + 1
-            x1, y1 = positions[a]
-            x2, y2 = positions[b]
-            length = math.hypot(x2 - x1, y2 - y1)
-            ux, uy = ((x2 - x1) / length, (y2 - y1) / length) if length else (1, 0)
-            px, py = -uy, ux
-            offset = index * 48 * self.zoom
-            cx, cy = (x1 + x2) / 2 + px * offset, (y1 + y2) / 2 + py * offset
-            if element.name in placed:
-                placement = placed[element.name]
-                cx, cy = placement.x * self.zoom, placement.y * self.zoom
-                ux, uy = {0: (1, 0), 90: (0, 1), 180: (-1, 0), 270: (0, -1)}[placement.rotation]
-                px, py = -uy, ux
-            radius = 21 * self.zoom
-            start, end = (cx - ux * radius, cy - uy * radius), (cx + ux * radius, cy + uy * radius)
-            tag = (f'entity:element:{element.name}',)
-            color = '#b25b10' if self.selected == ('element', element.name) else '#254e79'
-            canvas.create_line(x1, y1, *start, fill=color, width=2, tags=tag)
-            canvas.create_line(*end, x2, y2, fill=color, width=2, tags=tag)
-            if type(element) is Resistor:
-                points = []
-                for i in range(9):
-                    along = -radius + 2 * radius * i / 8
-                    across = (6 * self.zoom * (-1 if i % 2 else 1)) if i not in (0, 8) else 0
-                    points.extend((cx + ux * along + px * across, cy + uy * along + py * across))
-                canvas.create_line(*points, fill=color, width=2, tags=tag)
-                unit = 'Ω'
-            else:
-                canvas.create_oval(cx - radius, cy - radius, cx + radius, cy + radius,
-                                    outline=color, width=2, fill='#f6f9fc', tags=tag)
-                if type(element) is VoltageSource:
-                    for distance, label in ((-9, '+'), (9, '−')):
-                        canvas.create_text(cx + ux * distance * self.zoom, cy + uy * distance * self.zoom,
-                                            text=label, fill=color, tags=tag)
-                    unit = 'V'
-                else:
-                    canvas.create_line(cx - ux * 11 * self.zoom, cy - uy * 11 * self.zoom,
-                                        cx + ux * 11 * self.zoom, cy + uy * 11 * self.zoom,
-                                        arrow='last', fill=color, width=2, tags=tag)
-                    unit = 'A'
-            canvas.create_text(cx + px * 38 * self.zoom, cy + py * 38 * self.zoom,
-                                text=f'{element.name}  {value_of(element):g} {unit}\n{state.endpoint_label(a)} → {state.endpoint_label(b)}',
-                                anchor=('e' if px < 0 else 'w') if abs(px) > .6 else ('s' if py < 0 else 'n'),
-                                fill=color, font=('Segoe UI', 9), tags=tag)
-        owners = state.terminal_owners()
-        for node, (x, y) in positions.items():
-            kind = 'terminal' if node in owners else 'node'
-            tag = (f'entity:{kind}:{node}',)
-            selected = self.selected == (kind, node) or self.pending == node
-            color = '#b25b10' if selected else '#173b61'
-            canvas.create_oval(x - 6, y - 6, x + 6, y + 6, fill=color, outline='white', width=2, tags=tag)
-            canvas.create_text(x + 12, y - 13, text=state.endpoint_label(node), anchor='w', fill=color,
-                                font=('Segoe UI', 10, 'bold'), tags=tag)
-            if state.document.circuit.reference_node == node:
-                canvas.create_line(x, y + 7, x, y + 18, fill=color, width=2, tags=tag)
-                for width, dy in ((14, 18), (9, 23), (4, 28)):
-                    canvas.create_line(x - width, y + dy, x + width, y + dy, fill=color, width=2, tags=tag)
-        content_region = canvas.bbox('all') or (0, 0, 1000, 700)
-        if self.mode == 'select' and self.selected and self.selected[0] == 'wire':
-            wire = next((w for w in state.wires if w.name == self.selected[1]), None)
-            if wire is not None:
-                for index, point in enumerate(wire.bends):
-                    x, y = point.x * self.zoom, point.y * self.zoom
-                    fill = '#b25b10' if self.selected_bend == (wire.name, index) else 'white'
-                    canvas.create_rectangle(x - 5, y - 5, x + 5, y + 5, fill=fill, outline='#b25b10', width=2,
-                                            tags=(f'entity:bend:{wire.name}', f'bend-index:{index}'))
-        canvas.configure(scrollregion=previous_region if preview is not None or schematic is not None else
-                         content_region)
+        bounds = render_schematic(self.canvas, schematic or self.session.state, self.zoom,
+            selected=self.selected, selected_bend=self.selected_bend, pending=self.pending, mode=self.mode, preview=preview)
+        if preview is None and schematic is None:
+            self._content_bounds = bounds
+            self._set_scroll_region()
         self._preview_route()
 
     def change_zoom(self, factor):
-        self.zoom = min(2.5, max(.4, self.zoom * factor))
+        try:
+            if isinstance(factor, bool) or not isinstance(factor, (int, float)) or not math.isfinite(factor) or factor <= 0:
+                raise ValueError('Zoom factor must be finite and positive')
+            self.set_zoom(self.zoom * factor)
+        except (ValueError, TypeError) as error:
+            self._error(error)
+
+    def _set_scroll_region(self):
+        width, height = max(1, self.canvas.winfo_width()), max(1, self.canvas.winfo_height())
+        if min(width, height) >= 80 and (width, height) != self._canvas_size:
+            self._resize_viewport(width, height)
+            return
+        self.canvas.configure(scrollregion=scroll_region(self._content_bounds, width, height))
+
+    def _ensure_viewport(self):
+        if hasattr(self, '_content_bounds'):
+            width, height = self.canvas.winfo_width(), self.canvas.winfo_height()
+            if min(width, height) >= 80 and (width, height) != self._canvas_size:
+                self._resize_viewport(width, height)
+
+    def _center_pixels(self, x, y):
+        left, top, right, bottom = map(float, self.canvas.cget('scrollregion').split())
+        self.canvas.xview_moveto(scroll_fraction(x, left, right, max(1, self.canvas.winfo_width())))
+        self.canvas.yview_moveto(scroll_fraction(y, top, bottom, max(1, self.canvas.winfo_height())))
+
+    def _canvas_resized(self, event):
+        # Read current dimensions rather than stale queued Configure payloads.
+        self._ensure_viewport()
+
+    def _resize_viewport(self, width, height):
+        initial = self._canvas_size is None
+        if initial:
+            bounds = self._content_bounds
+            center = ((bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2)
+        else:
+            center = (self.canvas.canvasx(self._canvas_size[0] / 2),
+                      self.canvas.canvasy(self._canvas_size[1] / 2))
+        self._canvas_size = (width, height)
+        self.canvas.configure(scrollregion=scroll_region(self._content_bounds, width, height))
+        if initial and self._initial_view is not None:
+            self.canvas.xview_moveto(self._initial_view.scroll_x)
+            self.canvas.yview_moveto(self._initial_view.scroll_y)
+        else:
+            self._center_pixels(*center)
+        self._initial_view = None
+        if hasattr(self, '_clean_project'):
+            if initial and not self.dirty and self._clean_project.schematic == self.session.state:
+                self._clean_project = SchematicProject(self.session.state,
+                    ViewState(self.zoom, self.canvas.xview()[0], self.canvas.yview()[0]))
+            self._update_dirty()
+
+    def set_zoom(self, zoom):
+        self._ensure_viewport()
+        zoom = clamp_zoom(zoom)
+        center = (self.canvas.canvasx(self.canvas.winfo_width() / 2) / self.zoom,
+                  self.canvas.canvasy(self.canvas.winfo_height() / 2) / self.zoom)
+        self.zoom = zoom
         self.draw()
+        self._center_pixels(center[0] * zoom, center[1] * zoom)
         self._update_dirty()
+
+    def fit_circuit(self):
+        self._ensure_viewport()
+        width, height = self.canvas.winfo_width(), self.canvas.winfo_height()
+        if min(width, height) < 80:
+            self.status.set('Fit circuit needs a visible drawing area.')
+            return
+        # Text stays at a readable fixed size, so remeasure after scaling geometry.
+        for _ in range(6):
+            target = fit_zoom(self.zoom, self._content_bounds, width, height)
+            if abs(target - self.zoom) < 1e-4:
+                break
+            self.zoom = target
+            self.draw()
+        bounds = self._content_bounds
+        self._center_pixels((bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2)
+        self._update_dirty()
+        limited = bounds[2] - bounds[0] > width - 64 or bounds[3] - bounds[1] > height - 64
+        self.status.set(f'Circuit view: {self.zoom:.0%}.' + (' Zoom limit reached; use scrollbars for the full circuit.' if limited else ''))
 
     def undo(self):
         before = self.session.revision
@@ -691,6 +696,10 @@ class CircuitEditor:
         self.tool.set('select')
         self.mode = 'select'
         self._restore_view(view or ViewState())
+        if view is None:
+            self._initial_view = None
+            bounds = self._content_bounds
+            self._center_pixels((bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2)
         self._clean_project = self._snapshot()
         self._update_dirty()
         self._text('No current simulation result. Run Simulate DC for this document.')

@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-10-28: GUI-6 renderer and measured viewport
+
+Extract actual Canvas drawing into canvas_renderer.py, keeping controller I/O,
+dialogs and asynchronous analysis in gui.py. Tag symbols/wires/nodes/labels as
+circuit content; exclude grid, selection handles and previews from camera bounds.
+Put numerical zoom/scroll calculations in the standard-library-only viewport.py.
+
+Fit remeasures fixed-size labels after zooming, within existing 0.4–2.5 limits.
+Center-preserving zoom/reset/resize uses explicit scroll fractions and half-view
+padding. Lazily reconcile actual widget dimensions: withdrawn Tk windows can
+realize size after construction without Configure delivery. Initial realization
+must neither dirty a clean document nor lose an explicitly restored camera.
+Subsequent camera changes are saved view edits and retain valid electrical results.
+V3 fields still mean leading fractions, but different renderer bounds can change
+the view of older files. Graph/layout are unchanged. Package 0.8.0. See VIEWPORT.md.
+
 ## 2026-10-28: GUI-5 bend editing and explicit Manhattan geometry
 
 Retain project v3: handles edit existing Waypoints, and right-angle routes are

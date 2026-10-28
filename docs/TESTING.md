@@ -59,8 +59,10 @@ are not available until the workflow has actually been committed/pushed and run.
 - Bend editing suite: independently derived Manhattan paths in both orders,
   duplicate/collinear/backtracking behavior, exact endpoints, bend edit validation,
   generated-count rollback, history/format stability and analytical DC invariance.
+- Viewport suite: independent fit/scroll arithmetic, signed/extreme/tiny bounds,
+  invalid inputs and renderer/view imports with no Tk/NumPy side effects.
 - Opt-in Tk checks: `python -B scripts/check_gui.py -v` in a display session with
-  NumPy. Forty-two tests exercise canvas hit targets/movement, creation/edit errors,
+  NumPy. Forty-nine tests exercise canvas hit targets/movement, creation/edit errors,
   reference/delete/undo, async success/failure/stale results, zoom and export/open,
   graphical save/reopen/view state, cancellation, failed saves/loads, dirty-state
   restoration and stale completion across document boundaries; blank placement,
@@ -72,6 +74,9 @@ are not available until the workflow has actually been committed/pushed and run.
   Bend tests cover drag/cancel/no-op, zoomed Unicode/colon handle tags, Shift-insert,
   Delete, right-angle preview/completion, elbow order, preference/result isolation,
   generated-count failure and minimum-width toolbar visibility.
+  View tests map a real drawing area and verify full content/text fit, center
+  preservation during zoom/reset/resize, graph/result/history invariance, signed
+  and large layouts, handle/preview exclusion and saved fit-camera restoration.
 - DC assembly: explicit hand-written MNA matrix and RHS; topology errors.
 - DC solution: hand-derived divider, parallel, supernode, balanced/unbalanced
   bridges and multiple-source results. KCL at reference and other nodes,
@@ -92,6 +97,18 @@ Expected reference answers are derived independently and must not be changed to
 accommodate an implementation error.
 
 ## Latest local run: 2026-10-28
+
+GUI-6: **233 headless tests** passed on Python 3.11.9 and 3.14.6. Without
+site-packages: **213 passed, 20 expected NumPy skips**. Both interpreters passed
+**49 Tk tests**, including seven new viewport workflows. Seven headless viewport/
+import tests were added. An initial cancellation regression exposed lazy Tk size
+realization; it was fixed without weakening the saved-state assertion. Fit tests
+map their windows, rather than treating a withdrawn 1-pixel canvas as visible.
+Fresh core-only installs passed 213 tests with 20 expected skips, then all 233
+under NumPy 2.4.6, on both interpreters. Both new modules passed installed-origin
+checks; dependency, command/alias and editable checks passed. Live Fit Circuit
+included the entire routed layout and labels. All 14 Canvas creation sites were
+preserved by extraction. No hosted CI evidence is claimed.
 
 GUI-5: source checks passed **226 headless tests** on Python 3.11.9 and 3.14.6;
 without site-packages **206 passed with 20 expected NumPy skips**. Both interpreters
