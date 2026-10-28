@@ -75,6 +75,7 @@ from circuit_calculator.project_io import SchematicProject, ViewState, save_proj
 from circuit_calculator.schematic import Waypoint, placed_divider_example
 state = placed_divider_example().rotate_component('R1').route_wire('W1', (Waypoint(500, 500), Waypoint(160, 500)))
 state = state.split_wire('W1', 1, 300, 500)
+state = state.move_wire_bend('W1', 0, 540, 540).orthogonalize_wire('W1')
 project = SchematicProject(state, ViewState(1.25, .2, .3))
 project_path = folder / 'installed-example.ccproj.json'
 save_project(project, project_path)

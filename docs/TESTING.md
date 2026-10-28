@@ -56,8 +56,11 @@ are not available until the workflow has actually been committed/pushed and run.
   reroute identity, diagonal/degenerate segment projection, split path partition,
   explicit crossing merge and deletion split, rollback at limits, Undo/Redo,
   strict v1/v2/v3 compatibility and analytical routed-divider equivalence.
+- Bend editing suite: independently derived Manhattan paths in both orders,
+  duplicate/collinear/backtracking behavior, exact endpoints, bend edit validation,
+  generated-count rollback, history/format stability and analytical DC invariance.
 - Opt-in Tk checks: `python -B scripts/check_gui.py -v` in a display session with
-  NumPy. Thirty-three tests exercise canvas hit targets/movement, creation/edit errors,
+  NumPy. Forty-two tests exercise canvas hit targets/movement, creation/edit errors,
   reference/delete/undo, async success/failure/stale results, zoom and export/open,
   graphical save/reopen/view state, cancellation, failed saves/loads, dirty-state
   restoration and stale completion across document boundaries; blank placement,
@@ -66,6 +69,9 @@ are not available until the workflow has actually been committed/pushed and run.
   Routing checks cover preview/completion, cancel/Backspace, bend limits,
   reroute/straighten, explicit crossing splits/joins, zoomed path hit targets,
   endpoint/terminal rejection, stale-route cancellation and routed save/export.
+  Bend tests cover drag/cancel/no-op, zoomed Unicode/colon handle tags, Shift-insert,
+  Delete, right-angle preview/completion, elbow order, preference/result isolation,
+  generated-count failure and minimum-width toolbar visibility.
 - DC assembly: explicit hand-written MNA matrix and RHS; topology errors.
 - DC solution: hand-derived divider, parallel, supernode, balanced/unbalanced
   bridges and multiple-source results. KCL at reference and other nodes,
@@ -86,6 +92,14 @@ Expected reference answers are derived independently and must not be changed to
 accommodate an implementation error.
 
 ## Latest local run: 2026-10-28
+
+GUI-5: source checks passed **226 headless tests** on Python 3.11.9 and 3.14.6;
+without site-packages **206 passed with 20 expected NumPy skips**. Both interpreters
+passed **42 real Tk workflows**. Twelve headless and nine widget tests were added.
+Fresh core-only installs on both interpreters passed 206 tests with 20 expected
+skips, then all 226 under NumPy 2.4.6. Dependency, canonical/legacy command/import,
+edited-project round-trip and editable source checks passed. Live handles, drag
+and right-angle conversion were inspected. No hosted CI evidence is claimed.
 
 GUI-4: **214 headless tests** passed on Python 3.11.9 and 3.14.6. Without
 site-packages, **195 passed, 19 expected NumPy skips**. Both interpreters passed

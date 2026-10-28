@@ -28,6 +28,11 @@ Wire owns an immutable tuple of Waypoint bends. Path points use node positions
 at the ends and fixed world-coordinate bends inside; only Wire.first/second
 participate in net resolution. Splitting explicitly creates/reuses a junction
 and replaces one wire with two while partitioning its geometry. See WIRE_ROUTING.md.
+Bend insertion/movement/removal and explicit Manhattan conversion also live in
+schematic.py. The conversion simplifies duplicate and between-collinear points,
+preserves reversals/endpoints and uses normal wire validation for bend limits.
+Routing preferences and handle/drag selection stay in gui.py, outside persistence.
+See BEND_EDITING.md; the graphical schema remains v3.
 _document_io.py shares bounded JSON and atomic-file primitives between both file
 formats. Circuit I/O exposes validated data adapters for embedding without
 relaxing its existing schema. See SCHEMATIC_FORMAT.md and GUI_DESIGN.md.

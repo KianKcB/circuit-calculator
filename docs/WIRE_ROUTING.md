@@ -1,5 +1,8 @@
 # GUI-4: wire paths and explicit splitting
 
+GUI-4 base contract. [BEND_EDITING.md](BEND_EDITING.md) extends this with handles
+and optional right-angle routing without changing the project-v3 schema.
+
 Design contract, 2026-10-28. No electrical model, device law or solver changes.
 
 Wire gains an immutable tuple of Waypoint(x, y) bends, at most 32 per wire.

@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-10-28: GUI-5 bend editing and explicit Manhattan geometry
+
+Retain project v3: handles edit existing Waypoints, and right-angle routes are
+ordinary bend arrays. Keep preferences transient so old files need no inferred
+constraint or migration. Use a deterministic horizontal-first/vertical-first
+elbow per diagonal anchor leg, simplify duplicate/between-collinear points and
+preserve reversals. Never reroute automatically during endpoint/handle movement.
+
+Select wire bends using square handles; Shift-click inserts a projected bend,
+distinct from explicit electrical splitting. Drag previews do not mutate state,
+history or the scroll region; release commits once, Escape cancels. A click-only
+selection preserves off-grid geometry. Delete removes a selected bend, not its
+wire. Keep wire name and bend index separate in tags to support Unicode/colons.
+Generated routes obey the existing 32-bend limit and fail without truncation.
+Local package 0.7.0; no dependencies/model/device-law changes. See BEND_EDITING.md.
+
 ## 2026-10-28: GUI-4 explicit wire geometry and splitting
 
 Add frozen Waypoint bends directly to Wire, retaining the three-argument Wire

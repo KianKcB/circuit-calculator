@@ -28,6 +28,157 @@ from circuit_calculator.project_io import load_project, save_project, SchematicP
 
 
 class TkWorkflowTests(unittest.TestCase):
+    def bend_wire(self, name='W1'):
+        self.app._apply(self.app.session.state.route_wire('W1', (Waypoint(500, 500), Waypoint(160, 500))))
+        if name != 'W1':
+            from dataclasses import replace
+            state = self.app.session.state
+            self.app._apply(replace(state, wires=tuple(replace(w, name=name) if w.name == 'W1' else w for w in state.wires)))
+        self.mode('select')
+        self.app.selected = ('wire', name)
+        self.app.draw()
+
+    def test_bend_handle_drag_preview_commit_and_undo(self):
+        self.bend_wire()
+        original, revision = self.app.session.state, self.app.session.revision
+        region = self.app.canvas.cget('scrollregion')
+        self.assertEqual(self.app._hit(self.point(500, 500)), ('bend', ('W1', 0)))
+        self.app.click(self.point(500, 500))
+        self.app.motion(self.point(560, 540))
+        self.assertEqual(self.app.session.state, original)
+        self.assertEqual(self.app.canvas.cget('scrollregion'), region)
+        self.app.release(self.point(560, 540))
+        self.assertEqual(self.app.session.revision, revision + 1)
+        self.assertEqual(self.app.session.state.wires[0].bends[0], Waypoint(560, 540))
+        self.assertEqual(self.app.session.state.compile(), original.compile())
+        self.app.undo()
+        self.assertEqual(self.app.session.state, original)
+
+    def test_bend_cancel_invalid_release_and_off_grid_click_preserve_state(self):
+        self.bend_wire()
+        original = self.app._snapshot()
+        self.app.click(self.point(500, 500))
+        self.app.motion(self.point(2000, 2000))
+        self.app.cancel()
+        self.assertEqual(self.app._snapshot(), original)
+        self.app.selected = ('wire', 'W1')
+        self.app.draw()
+        self.app.click(self.point(500, 500))
+        self.app.motion(self.point(560, 540))
+        self.app.release(self.point(100100, 540))
+        self.assertEqual(self.app._snapshot(), original)
+        self.app._apply(self.app.session.state.move_wire_bend('W1', 0, 501.5, 500.25))
+        off_grid, revision = self.app.session.state, self.app.session.revision
+        point = self.point(501.5, 500.25)
+        self.app.click(point)
+        self.app.release(point)
+        self.assertEqual(self.app.session.state, off_grid)
+        self.assertEqual(self.app.session.revision, revision)
+
+    def test_shift_insert_and_delete_bend_preserve_wire_and_undo(self):
+        original = self.app.session.state
+        self.app.click(self.point(330, 420))
+        self.assertEqual(self.app.selected, ('wire', 'W1'))
+        self.app.insert_bend_at(self.point(330, 423))
+        self.assertEqual(self.app.session.state.wires[0].bends, (Waypoint(330, 420),))
+        self.assertEqual(self.app.session.state.compile(), original.compile())
+        self.app.delete()
+        self.assertEqual(self.app.session.state, original)
+        self.app.undo()
+        self.assertEqual(self.app.session.state.wires[0].bends, (Waypoint(330, 420),))
+        before = self.app.session.state
+        self.app.selected = ('wire', 'W1')
+        self.app.insert_bend_at(self.point(800, 800))
+        self.assertEqual(self.app.session.state, before)
+
+    def test_colon_unicode_bend_tags_and_zoomed_hit_target(self):
+        name = 'wire:مدار:1'
+        self.bend_wire(name)
+        self.app.change_zoom(1.25)
+        self.assertEqual(self.app._hit(self.point(500, 500)), ('bend', (name, 0)))
+        self.app.click(self.point(500, 500))
+        self.app.motion(self.point(540, 540))
+        self.app.release(self.point(540, 540))
+        self.assertEqual(self.app.session.state.wires[0].bends[0], Waypoint(540, 540))
+
+    def angle_document(self):
+        self.app._reset_document(Schematic(CircuitDocument(Circuit(('a', 'b', 'unconnected'), (), 'a')),
+            (Position('a', 100, 100), Position('b', 300, 300), Position('unconnected', 300, 100))))
+        self.app.orthogonal.set(True)
+        self.app.routing_style_changed()
+        self.mode('wire')
+
+    def test_right_angle_preview_matches_completion_and_does_not_connect_elbow_dot(self):
+        self.angle_document()
+        original = self.app._snapshot()
+        self.app.click(self.node('a'))
+        self.app.route_motion(self.node('b'))
+        preview = self.app.canvas.coords(self.app.canvas.find_withtag('route-preview')[0])
+        self.assertEqual(preview, [100, 100, 300, 100, 300, 300])
+        self.assertEqual(self.app._snapshot(), original)
+        self.app.click(self.node('b'))
+        state = self.app.session.state
+        self.assertEqual(state.wires[0].bends, (Waypoint(300, 100),))
+        self.assertNotEqual(state.net_names()['unconnected'], state.net_names()['a'])
+        self.assertEqual(self.app.canvas.coords(self.app.canvas.find_withtag('entity:wire:W1')[0]), preview)
+
+    def test_space_changes_pending_elbow_order_without_committing(self):
+        self.angle_document()
+        self.app.click(self.node('a'))
+        original = self.app.session.state
+        self.app.toggle_route_order()
+        self.assertFalse(self.app.horizontal_first)
+        self.assertEqual(self.app.session.state, original)
+        self.app.click(self.node('b'))
+        self.assertEqual(self.app.session.state.wires[0].bends, (Waypoint(100, 300),))
+
+    def test_routing_preference_preserves_saved_state_and_results(self):
+        self.app.simulate()
+        self.wait_for_result()
+        original, result = self.app._snapshot(), self.app.session.result
+        self.app.orthogonal.set(True)
+        self.app.routing_style_changed()
+        self.assertEqual(self.app._snapshot(), original)
+        self.assertFalse(self.app.dirty)
+        self.assertIs(self.app.session.result, result)
+
+    def test_orthogonalize_selected_wire_and_generated_limit_rollback(self):
+        self.app._apply(self.app.session.state.route_wire('W1', (Waypoint(300, 500),)))
+        original = self.app.session.state
+        self.app.selected = ('wire', 'W1')
+        self.app.orthogonalize()
+        points = self.app.session.state.wire_points('W1')
+        self.assertTrue(all(a[0] == b[0] or a[1] == b[1] for a, b in zip(points, points[1:])))
+        self.assertEqual(self.app.session.state.compile(), original.compile())
+        self.app.undo()
+        self.assertEqual(self.app.session.state, original)
+        bends = tuple(Waypoint(600 if i % 2 else 700, 200 + i * 10) for i in range(32))
+        self.app._apply(original.route_wire('W1', bends))
+        before = self.app.session.state
+        self.app.selected = ('wire', 'W1')
+        self.app.orthogonalize()
+        self.assertEqual(self.app.session.state, before)
+        self.assertIn('32 bends', self.app.status.get())
+        self.angle_document()
+        before = self.app.session.state
+        self.app.click(self.node('a'))
+        for i in range(17):
+            self.app.click(self.point(800 + (i % 2) * 20, 80 + i * 20))
+        self.app.click(self.node('b'))
+        self.assertEqual(self.app.session.state, before)
+        self.assertEqual(self.app.pending, 'a')
+        self.assertEqual(len(self.app.route_bends), 17)
+        self.assertIn('32 bends', self.app.status.get())
+
+    def test_edit_controls_fit_minimum_window_width(self):
+        self.root.geometry('900x600')
+        self.root.deiconify()
+        self.root.update()
+        right = self.root.winfo_rootx() + self.root.winfo_width()
+        for name, button in self.app.buttons.items():
+            with self.subTest(button=name):
+                self.assertLessEqual(button.winfo_rootx() + button.winfo_width(), right)
+
     def crossing(self):
         self.app._reset_document(Schematic(CircuitDocument(Circuit(('a', 'b', 'c', 'd'), (), 'a')),
             (Position('a', 100, 300), Position('b', 500, 300), Position('c', 300, 100), Position('d', 300, 500)),

@@ -46,7 +46,7 @@ progress and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for development commands
   Windows and Linux. Newer versions are outside the current test matrix.
 - The formula CLI and circuit model need only the standard library. DC solving
   adds the optional NumPy dependency.
-- Version 0.6.0 is currently a local development package. Installation commands
+- Version 0.7.0 is currently a local development package. Installation commands
   below use this checkout; it has not been published to a package registry.
 
 Open a terminal in the project directory and check that Python is available:
@@ -292,6 +292,16 @@ original ending dot. **Straighten** removes its bends. These operations preserve
 endpoint identities. Moving a symbol/junction moves attached endpoints while
 bends stay at their world coordinates; segments may become diagonal.
 
+In **Select / move**, selecting a wire shows square bend handles. Drag a handle
+to move a bend; select a handle and choose **Delete** to remove that bend while
+keeping the wire. Shift-click a selected segment to insert a bend. Escape cancels
+a drag; Undo restores the previous path. Bends never become electrical junctions.
+
+Enable **Right-angle wires** for newly drawn/rerouted paths. Space swaps elbow
+order while drawing. **Orthogonalize** converts a selected wire to horizontal and
+vertical segments. This is a geometry edit, not obstacle avoidance or a permanent
+constraint: later endpoint/handle movement can make segments diagonal again.
+
 Choose **Split wire** and click a segment to insert a junction. At crossings,
 select the intended wire away from the crossing first. Only that wire splits.
 To join the other crossing wire, select it away from the new dot and Split at
@@ -332,16 +342,18 @@ file when needed. Moving or rotating a junction-based
 component gives it dedicated terminals wired back to its original junctions;
 Undo restores the exact previous graph. Terminals move/delete with their body.
 Wires support straight/diagonal segments with explicit bends and splitting.
-Automatic orthogonal routing, bend dragging and obstacle avoidance remain planned.
+Bend handles and optional right-angle routing are available; obstacle avoidance
+and persistent orthogonal constraints remain planned.
 The electrical model and solver stay independent of Tk and layout coordinates.
 See [COMPONENT_EDITING.md](docs/COMPONENT_EDITING.md) for geometry and migration rules.
 See [WIRE_ROUTING.md](docs/WIRE_ROUTING.md) for routing, splitting and crossing rules.
+See [BEND_EDITING.md](docs/BEND_EDITING.md) for bend handles and right-angle routing.
 
 ## Future roadmap
 
 The following are planned ideas and are **not implemented**:
 
-- Wire bend handles, orthogonal routing, copy/paste and richer schematic editing.
+- Copy/paste, obstacle-aware routing, result annotations and richer schematic editing.
 - Extended DC analysis with controlled sources and equivalent-port calculations.
 - RC and RLC circuit analysis.
 

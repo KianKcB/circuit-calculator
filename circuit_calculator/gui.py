@@ -8,7 +8,7 @@ from pathlib import Path
 from circuit_calculator.circuit import Circuit, CurrentSource, Resistor, VoltageSource
 from circuit_calculator.circuit_io import CircuitDocument, load_document, save_document
 from circuit_calculator.schematic import (EditorSession, Position, Schematic, Wire, Waypoint, MAX_BENDS,
-                       component, divider_example, terminals, value_of)
+                       component, divider_example, terminals, value_of, orthogonal_bends)
 from circuit_calculator.project_io import (SchematicProject, ViewState, load_project,
                                           save_project as write_project)
 
@@ -27,6 +27,7 @@ class CircuitEditor:
         self.route_bends, self.routing_wire = [], None
         self.drag_node = None
         self.drag_element = None
+        self.drag_bend = self.selected_bend = None
         self.drag_offset = (0, 0)
         self.drag_origin = (0, 0)
         self.zoom = 1.0
@@ -54,11 +55,16 @@ class CircuitEditor:
                                ('Undo', self.undo), ('Redo', self.redo),
                                ('Edit value', self.edit_value), ('Rotate 90°', self.rotate), ('Delete', self.delete),
                                ('Reroute wire', self.reroute_wire), ('Straighten', self.straighten_wire),
+                               ('Orthogonalize', self.orthogonalize),
                                ('Simulate DC', self.simulate)):
-            parent = edit_actions if label in ('Undo', 'Redo', 'Edit value', 'Rotate 90°', 'Delete', 'Reroute wire', 'Straighten', 'Simulate DC') else actions
+            parent = edit_actions if label in ('Undo', 'Redo', 'Edit value', 'Rotate 90°', 'Delete', 'Reroute wire', 'Straighten', 'Orthogonalize', 'Simulate DC') else actions
             button = ttk.Button(parent, text=label, command=command)
             button.pack(side='left', padx=2)
             self.buttons[label] = button
+        self.orthogonal = tk.BooleanVar(value=False)
+        self.horizontal_first = True
+        ttk.Checkbutton(actions, text='Right-angle wires', variable=self.orthogonal,
+                        command=self.routing_style_changed).pack(side='right', padx=8)
         tools = ttk.Frame(root, padding=(10, 0, 10, 8))
         tools.pack(fill='x')
         self.tool = tk.StringVar(value='select')
@@ -97,10 +103,13 @@ class CircuitEditor:
         self.canvas.bind('<Button-1>', self.click)
         self.canvas.bind('<B1-Motion>', self.motion)
         self.canvas.bind('<ButtonRelease-1>', self.release)
+        self.canvas.bind('<Shift-Button-1>', self.insert_bend_at)
         self.canvas.bind('<Double-Button-1>', lambda event: self.edit_value())
         self.canvas.bind('<Key-r>', lambda event: self.rotate())
         self.canvas.bind('<Key-R>', lambda event: self.rotate())
         self.canvas.bind('<BackSpace>', lambda event: self.remove_bend())
+        self.canvas.bind('<Delete>', lambda event: self.delete())
+        self.canvas.bind('<space>', self.toggle_route_order)
         self.canvas.bind('<Motion>', self.route_motion)
         self.canvas.bind('<ButtonPress-2>', lambda event: self.canvas.scan_mark(event.x, event.y))
         self.canvas.bind('<B2-Motion>', self._pan)
@@ -151,10 +160,10 @@ class CircuitEditor:
     def change_mode(self):
         self.mode = self.tool.get()
         self._clear_route()
-        self.drag_node = self.drag_element = None
+        self.drag_node = self.drag_element = self.drag_bend = self.selected_bend = None
         self.status.set('Click empty space to place a junction.' if self.mode == 'node' else
                         'Select a terminal or junction for the zero-volt reference.' if self.mode == 'ground' else
-                        'Select and drag a component body or junction. R rotates the selected component.' if self.mode == 'select' else
+                        'Drag a body, junction or selected wire bend. Shift-click a selected wire to add a bend; Delete removes a selected bend.' if self.mode == 'select' else
                         'Click a dot, empty space for bends, then another dot. Esc cancels; Backspace removes a bend.' if self.mode == 'wire' else
                         'Click a wire segment to split it. At overlaps, select the intended wire first.' if self.mode == 'split' else
                         'Click empty space to place a component, or select two free junctions in terminal order.')
@@ -192,7 +201,14 @@ class CircuitEditor:
             for tag in tags:
                 if tag.startswith('entity:'):
                     _, kind, name = tag.split(':', 2)
+                    if kind == 'bend':
+                        index = next(t.split(':', 1)[1] for t in tags if t.startswith('bend-index:'))
+                        hits.append((kind, (name, int(index))))
+                        continue
                     hits.append((kind, name))
+        bend = next((hit for hit in hits if hit[0] == 'bend'), None)
+        if bend is not None:
+            return bend
         return next((hit for hit in hits if hit[0] in ('node', 'terminal')), hits[0] if hits else None)
 
     def _clear_route(self):
@@ -210,13 +226,69 @@ class CircuitEditor:
         start = next((p for p in self.session.state.positions if p.node == self.pending), None)
         if start is None:
             return
-        points = [(start.x * self.zoom, start.y * self.zoom)]
-        points += [(p.x * self.zoom, p.y * self.zoom) for p in self.route_bends]
+        points = [(start.x, start.y)]
+        points += [(p.x, p.y) for p in self.route_bends]
         if event is not None:
-            points.append((self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)))
+            points.append((self.canvas.canvasx(event.x) / self.zoom, self.canvas.canvasy(event.y) / self.zoom))
         if len(points) > 1:
-            self.canvas.create_line(*(v for point in points for v in point), fill='#b25b10',
+            if self.orthogonal.get():
+                try:
+                    bends = orthogonal_bends(points, horizontal_first=self.horizontal_first)
+                    points = [points[0], *((p.x, p.y) for p in bends), points[-1]]
+                except (ValueError, TypeError):
+                    return
+            self.canvas.create_line(*(v * self.zoom for point in points for v in point), fill='#b25b10',
                                     width=2, dash=(5, 4), tags=('route-preview',))
+
+    def routing_style_changed(self):
+        self._preview_route()
+        self.status.set('Right-angle routing enabled. Space swaps elbow order while drawing.' if self.orthogonal.get() else
+                        'Free-path routing enabled.')
+
+    def toggle_route_order(self, event=None):
+        if self.mode == 'wire' and self.pending is not None and self.orthogonal.get():
+            self.horizontal_first = not self.horizontal_first
+            self._preview_route()
+            self.status.set(('Horizontal' if self.horizontal_first else 'Vertical') + '-first right-angle routing. Space swaps order.')
+        return 'break'
+
+    def _completed_bends(self, first, second):
+        if not self.orthogonal.get():
+            return tuple(self.route_bends)
+        positions = {p.node: (p.x, p.y) for p in self.session.state.positions}
+        return orthogonal_bends((positions[first], *((p.x, p.y) for p in self.route_bends), positions[second]),
+                                horizontal_first=self.horizontal_first)
+
+    def orthogonalize(self):
+        if not self.selected or self.selected[0] != 'wire':
+            self.status.set('Select a wire to convert to right angles.')
+            return
+        try:
+            state = self.session.state.orthogonalize_wire(self.selected[1], horizontal_first=self.horizontal_first)
+            self.selected_bend = None
+            self._apply(state)
+            self.status.set('Converted selected wire to right angles; endpoints and connections are unchanged.')
+        except (ValueError, TypeError) as error:
+            self._error(error)
+
+    def insert_bend_at(self, event):
+        self.canvas.focus_set()
+        if self.mode != 'select' or not self.selected or self.selected[0] != 'wire':
+            self.status.set('Select a wire, then Shift-click the interior of its segment to add a bend.')
+            return 'break'
+        try:
+            name = self.selected[1]
+            x, y = self.canvas.canvasx(event.x) / self.zoom, self.canvas.canvasy(event.y) / self.zoom
+            segment, point, distance = self.session.state.nearest_wire_segment(name, x, y)
+            if distance * self.zoom > 6:
+                raise ValueError('Shift-click the selected wire segment')
+            state = self.session.state.insert_wire_bend(name, segment, *point)
+            self.selected_bend = (name, segment)
+            self._apply(state)
+            self.status.set('Bend inserted. Drag its square handle; Delete removes the selected bend.')
+        except (ValueError, TypeError) as error:
+            self._error(error)
+        return 'break'
 
     def remove_bend(self):
         if self.mode == 'wire' and self.pending is not None and self.route_bends:
@@ -243,6 +315,7 @@ class CircuitEditor:
             return
         try:
             state = self.session.state.route_wire(self.selected[1], ())
+            self.selected_bend = None
             self._clear_route()
             self._apply(state)
             self.status.set('Wire bends removed; endpoint connections are unchanged.')
@@ -302,9 +375,18 @@ class CircuitEditor:
                 self._apply(self.session.state.add_node(name, x, y))
                 self.status.set(f'Added junction {name}.')
             elif self.mode == 'select':
+                self.drag_bend = self.selected_bend = None
                 self.selected = hit
                 self.drag_node = hit[1] if hit and hit[0] == 'node' else None
                 self.drag_element = hit[1] if hit and hit[0] == 'element' else None
+                if hit and hit[0] == 'bend':
+                    name, index = hit[1]
+                    self.selected = ('wire', name)
+                    self.drag_bend = self.selected_bend = (name, index)
+                    point = next(w for w in self.session.state.wires if w.name == name).bends[index]
+                    self.drag_origin = (event.x, event.y)
+                    self.drag_offset = (self.canvas.canvasx(event.x) / self.zoom - point.x,
+                                        self.canvas.canvasy(event.y) / self.zoom - point.y)
                 if self.drag_element:
                     placement = self.session.state.component_placement(self.drag_element)
                     self.drag_origin = (event.x, event.y)
@@ -335,10 +417,10 @@ class CircuitEditor:
                             wire = next(w for w in self.session.state.wires if w.name == self.routing_wire)
                             if name != wire.second:
                                 raise ValueError('A rerouted wire must finish at its original ending dot')
-                            state = self.session.state.route_wire(wire.name, self.route_bends)
+                            state = self.session.state.route_wire(wire.name, self._completed_bends(first, name))
                         else:
                             wire_name = self._next_name('W', {w.name for w in self.session.state.wires})
-                            state = self.session.state.add_wire(Wire(wire_name, first, name, self.route_bends))
+                            state = self.session.state.add_wire(Wire(wire_name, first, name, self._completed_bends(first, name)))
                         self._clear_route()
                         self._apply(state)
                     else:
@@ -375,6 +457,12 @@ class CircuitEditor:
                 round((self.canvas.canvasy(event.y) / self.zoom - self.drag_offset[1]) / 20) * 20)
 
     def motion(self, event):
+        if self.drag_bend is not None:
+            try:
+                self.draw(schematic=self.session.state.move_wire_bend(*self.drag_bend, *self._drag_position(event)))
+            except (ValueError, TypeError) as error:
+                self._error(error)
+                self.draw()
         if self.drag_element:
             try:
                 self.draw(schematic=self.session.state.move_component(self.drag_element, *self._drag_position(event)))
@@ -391,6 +479,15 @@ class CircuitEditor:
                 self.draw()
 
     def release(self, event):
+        if self.drag_bend is not None:
+            target, self.drag_bend = self.drag_bend, None
+            try:
+                distance = math.hypot(event.x - self.drag_origin[0], event.y - self.drag_origin[1])
+                if distance > 3:
+                    self._apply(self.session.state.move_wire_bend(*target, *self._drag_position(event)))
+            except (ValueError, TypeError) as error:
+                self._error(error)
+            self.draw()
         if self.drag_element:
             name, self.drag_element = self.drag_element, None
             try:
@@ -414,6 +511,7 @@ class CircuitEditor:
 
     def draw(self, preview=None, *, schematic=None):
         canvas, state = self.canvas, schematic or self.session.state
+        previous_region = canvas.cget('scrollregion')
         canvas.delete('all')
         positions = {p.node: (p.x * self.zoom, p.y * self.zoom) for p in state.positions}
         if preview:
@@ -491,7 +589,17 @@ class CircuitEditor:
                 canvas.create_line(x, y + 7, x, y + 18, fill=color, width=2, tags=tag)
                 for width, dy in ((14, 18), (9, 23), (4, 28)):
                     canvas.create_line(x - width, y + dy, x + width, y + dy, fill=color, width=2, tags=tag)
-        canvas.configure(scrollregion=canvas.bbox('all') or (0, 0, 1000, 700))
+        content_region = canvas.bbox('all') or (0, 0, 1000, 700)
+        if self.mode == 'select' and self.selected and self.selected[0] == 'wire':
+            wire = next((w for w in state.wires if w.name == self.selected[1]), None)
+            if wire is not None:
+                for index, point in enumerate(wire.bends):
+                    x, y = point.x * self.zoom, point.y * self.zoom
+                    fill = '#b25b10' if self.selected_bend == (wire.name, index) else 'white'
+                    canvas.create_rectangle(x - 5, y - 5, x + 5, y + 5, fill=fill, outline='#b25b10', width=2,
+                                            tags=(f'entity:bend:{wire.name}', f'bend-index:{index}'))
+        canvas.configure(scrollregion=previous_region if preview is not None or schematic is not None else
+                         content_region)
         self._preview_route()
 
     def change_zoom(self, factor):
@@ -514,6 +622,7 @@ class CircuitEditor:
             self.selected = self.pending = None
             self._clear_route()
             self.drag_node = self.drag_element = None
+            self.drag_bend = self.selected_bend = None
             self._text('Results cleared after Undo/Redo. Run Simulate DC again.')
             self.draw()
             self._update_dirty()
@@ -544,6 +653,15 @@ class CircuitEditor:
             self._error(error)
 
     def delete(self):
+        if self.selected_bend is not None:
+            try:
+                state = self.session.state.remove_wire_bend(*self.selected_bend)
+                self.drag_bend = self.selected_bend = None
+                self._apply(state)
+                self.status.set('Selected bend removed; the wire remains connected.')
+            except (ValueError, TypeError) as error:
+                self._error(error)
+            return
         if self.selected:
             try:
                 if self.selected[0] == 'terminal':
@@ -568,6 +686,7 @@ class CircuitEditor:
         self.session.reset(state)
         self.project_path = Path(path).resolve() if path is not None else None
         self.selected = self.pending = self.drag_node = self.drag_element = None
+        self.drag_bend = self.selected_bend = None
         self._clear_route()
         self.tool.set('select')
         self.mode = 'select'

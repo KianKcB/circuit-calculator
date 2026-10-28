@@ -73,6 +73,35 @@ def project_segment(x, y, first, second):
     return point, math.hypot(x - point[0], y - point[1])
 
 
+def orthogonal_bends(points, *, horizontal_first=True):
+    """Build a Manhattan polyline through anchors, preserving reversals."""
+    if type(horizontal_first) is not bool:
+        raise TypeError('horizontal_first must be a bool')
+    anchors = tuple(Waypoint(*point) for point in points)
+    if len(anchors) < 2:
+        raise ValueError('A route needs two endpoints')
+    path = []
+
+    def append(point):
+        if path and point == path[-1]:
+            return
+        path.append(point)
+        while len(path) >= 3:
+            a, b, c = path[-3:]
+            between = ((a.x == b.x == c.x and min(a.y, c.y) <= b.y <= max(a.y, c.y)) or
+                       (a.y == b.y == c.y and min(a.x, c.x) <= b.x <= max(a.x, c.x)))
+            if not between:
+                break
+            del path[-2]
+
+    append(anchors[0])
+    for first, second in zip(anchors, anchors[1:]):
+        if first.x != second.x and first.y != second.y:
+            append(Waypoint(second.x, first.y) if horizontal_first else Waypoint(first.x, second.y))
+        append(second)
+    return tuple(path[1:-1])
+
+
 @dataclass(frozen=True)
 class Wire:
     name: str
@@ -326,6 +355,31 @@ class Schematic:
     def route_wire(self, name, bends):
         wire = replace(self._wire(name), bends=bends)
         return replace(self, wires=tuple(wire if w.name == name else w for w in self.wires))
+
+    def _bend_index(self, name, index, *, insert=False):
+        wire = self._wire(name)
+        if type(index) is not int or not 0 <= index < len(wire.bends) + int(insert):
+            raise ValueError('Choose a valid wire bend index')
+        return wire
+
+    def insert_wire_bend(self, name, segment, x, y):
+        wire = self._bend_index(name, segment, insert=True)
+        point = Waypoint(x, y)
+        points = self.wire_points(name)
+        if (x, y) in points[segment:segment + 2]:
+            raise ValueError('Choose the interior of a segment to add a bend')
+        return self.route_wire(name, (*wire.bends[:segment], point, *wire.bends[segment:]))
+
+    def move_wire_bend(self, name, index, x, y):
+        wire = self._bend_index(name, index)
+        return self.route_wire(name, tuple(Waypoint(x, y) if i == index else p for i, p in enumerate(wire.bends)))
+
+    def remove_wire_bend(self, name, index):
+        wire = self._bend_index(name, index)
+        return self.route_wire(name, (*wire.bends[:index], *wire.bends[index + 1:]))
+
+    def orthogonalize_wire(self, name, *, horizontal_first=True):
+        return self.route_wire(name, orthogonal_bends(self.wire_points(name), horizontal_first=horizontal_first))
 
     def nearest_wire_segment(self, name, x, y):
         Waypoint(x, y)

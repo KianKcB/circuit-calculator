@@ -71,8 +71,10 @@ distinct controls. See SCHEMATIC_FORMAT.md for strict schema/save semantics.
 
 Free component placement/rotation and explicit terminal wiring are verified in
 GUI-3. GUI-4 adds polyline bends, reroute/straighten and explicit segment splitting
-with junction creation/reuse. Automatic orthogonal routing, bend dragging,
-copy/paste and the complete phase-6 workflow remain planned. Do not mark phase 6
+with junction creation/reuse. GUI-5 adds bend handles/insertion/removal and optional
+right-angle conversion/drawing, with one-step drag commits and cancelable previews.
+Obstacle avoidance, persistent routing constraints, copy/paste and the complete
+phase-6 workflow remain planned. Do not mark phase 6
 complete. Tests must cover topology independent of geometry, net merge/split,
 orientation, delete/undo, stale-result rejection, analytical export/load/solve
 equivalence, Tk widget workflows and installed distribution imports. Graphical

@@ -1,8 +1,9 @@
 # Project status and continuation
 
-Date: 2026-10-28. GUI-3 was committed as `c0951d8`; GUI-4 began with a
-clean working tree. Current GUI-4 changes are local and uncommitted; no staging,
-commit, push or branch operation was performed. Package version is now 0.6.0;
+Date: 2026-10-28. GUI-4 was committed as `9dc4c4c`; GUI-5 began with a
+clean working tree and no unrelated changes. The user has now authorized staging
+and committing completed local batches; pushing remains a separate action.
+Package version is now 0.7.0;
 electrical document v1 and schematic-project v3 are separate formats. Project-v1/v2
 loading remains supported.
 Use README and DEVELOPMENT.md for current package paths/commands; historical
@@ -538,14 +539,51 @@ remain fixed during endpoint movement. New saves need a v3-capable app; preserve
 older originals with Save As. No hosted CI or cross-platform GUI result is claimed.
 Phase 6 remains in progress.
 
+## Batch GUI-5: bend editing and optional right-angle routing
+
+Status: source, Tk, fresh wheel/editable installation and visual checks VERIFIED
+locally; batch prepared for an authorized local commit.
+
+Base `9dc4c4c`, initially clean. BEND_EDITING.md defines scope and acceptance.
+No electrical model/solver/device changes, dependencies or format migrations.
+
+- schematic.py adds deterministic Manhattan geometry through explicit anchors,
+  preserving endpoints/reversals and simplifying duplicates/between-collinear
+  points. Add validated bend insertion/movement/removal and selected-wire conversion.
+- GUI shows bend handles only for the selected wire in Select mode. Drag previews
+  retain saved state/history/scroll bounds; release commits once and Escape cancels.
+  Click-only selection preserves off-grid geometry. Shift-click inserts a projected
+  bend; Delete removes the selected bend while keeping the wire. Tags separate
+  Unicode/colon wire names from indices. Selection handles do not alter scroll bounds.
+- Optional Right-angle wires applies to completed new/rerouted paths, with Space
+  toggling elbow order. Orthogonalize converts one selected wire. Preferences are
+  transient and do not dirty projects or invalidate electrical results. Generated
+  paths obey the existing 32-bend limit; failure retains pending anchors for correction.
+  Later movement can make segments diagonal, with no implicit route constraints.
+- Twelve headless tests plus nine real Tk tests cover independent route answers,
+  geometry/identity invariance, count/bounds failures, one-step history/cancel,
+  drag/no-op, zoomed Unicode handles, generated-path rollback, preview/completion,
+  electrical isolation of elbow dots, preference/result behavior and toolbar fit.
+  Installed smoke checks include bend movement and right-angle conversion.
+
+Source: **226 tests passed** on Python 3.11.9 and 3.14.6; without site-packages,
+**206 passed, 20 expected NumPy skips**. Both interpreters passed **42 Tk tests**.
+Analytical result remains **out=8 V**, **source power=-0.048 W**, balanced power.
+Fresh core-only installs on both interpreters passed **206 tests with 20 expected
+skips**, followed by **226 with no skips** under NumPy 2.4.6. Canonical/legacy
+commands and class identity, pip check, edited-project round trips and editable
+source imports outside the checkout passed. Commands: scripts/check_distributions.py
+with Python 3.11 and 3.14, after an isolated 0.7.0 build.
+The live preview showed square handles, a successful mouse drag and explicit
+right-angle conversion. Source model/solver/formula files and v1/v2/v3 examples
+remain unchanged. Syntax, documentation links and diff whitespace checks passed.
+
+Limits: no obstacle avoidance, persistent orthogonal constraint or automatic
+rerouting during movement. All edits retain existing endpoint/net identities.
+Package 0.7.0, project v3, native electrical v1. Hosted CI remains unverified.
+
 ## Exact next action
 
-Review GUI-4 as a coherent commit candidate.
-Suggested commit message: `Add routed wires and explicit junction splitting`.
-The user handles staging/commits/pushes; the index has not been changed.
-
-Next batch: specify bend handles and optional orthogonal routing, with clear
-endpoint-movement, cancel and Undo rules. Keep connections identity-based, reuse
-the v3 schema when feasible, and add constrained-route/geometry/GUI tests. Add a
-display-enabled CI lane when practical and inspect hosted evidence after a user
-push. Do not mark phase 6 complete yet.
+Commit GUI-5 using explicit paths, then continue viewport navigation/Fit to Circuit
+and display-enabled CI coverage. Keep geometry
+and connectivity separate; no push is authorized. Phase 6 remains in progress.
