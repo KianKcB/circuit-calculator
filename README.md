@@ -14,7 +14,7 @@ network analysis, and a Tk desktop editor prototype.
 - **Interactive CLI:** guides you through each calculation, shows units, and returns to the menu after successful calculations or handled input errors.
 - **Native circuit documents:** versioned JSON with circuit metadata, strict input validation and safe explicit saves.
 - **DC file command:** solves a supported circuit document and returns JSON results with units and diagnostics.
-- **Desktop prototype:** Tk editor with independent R/V/I placement, movement and rotation, terminal wiring, reference selection, undo/redo, project save/reopen, circuit import/export and DC results.
+- **Desktop prototype:** Tk editor with independent R/V/I placement, movement and rotation, routed wires, explicit wire splitting, reference selection, undo/redo, project save/reopen, circuit import/export and DC results.
 
 ## Project layout
 
@@ -46,7 +46,7 @@ progress and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for development commands
   Windows and Linux. Newer versions are outside the current test matrix.
 - The formula CLI and circuit model need only the standard library. DC solving
   adds the optional NumPy dependency.
-- Version 0.5.0 is currently a local development package. Installation commands
+- Version 0.6.0 is currently a local development package. Installation commands
   below use this checkout; it has not been published to a package registry.
 
 Open a terminal in the project directory and check that Python is available:
@@ -274,8 +274,10 @@ for the framework decision and supported scope.
 2. Choose **Junction** to place extra connection points. The starting empty `n1`
    junction must be connected or deleted before simulation of another network.
    Creating a component by clicking two existing free junctions is also supported.
-3. Choose **Wire** to join two terminal/junction dots, and **Reference** to select
-   the zero-volt dot. Crossings, overlaps and proximity never create connections.
+3. Choose **Wire**, click a terminal/junction dot, click empty space to add bends,
+   then click the ending dot. Escape cancels; Backspace removes a pending bend.
+   Choose **Reference** to select the zero-volt dot. Crossings, overlaps and
+   proximity never create connections.
 4. Use **Select / move** to drag a component body or junction. Select a body and
    choose **Rotate 90°**, or press R while the canvas has focus. Rotation is
    clockwise and preserves terminal identities, source signs and attached wires.
@@ -285,8 +287,19 @@ for the framework decision and supported scope.
    include node voltages, branch currents/power and conservation diagnostics.
    Edits clear results and stale worker results are discarded.
 
+Select a wire and choose **Reroute wire** to replace its bends, finishing at its
+original ending dot. **Straighten** removes its bends. These operations preserve
+endpoint identities. Moving a symbol/junction moves attached endpoints while
+bends stay at their world coordinates; segments may become diagonal.
+
+Choose **Split wire** and click a segment to insert a junction. At crossings,
+select the intended wire away from the crossing first. Only that wire splits.
+To join the other crossing wire, select it away from the new dot and Split at
+that existing junction. Every split/join is explicit and undoable. Ordinary
+Junction placement and bends never split or connect intersecting wires.
+
 **Open Project**, **Save Project** (Ctrl+S), and **Save As** preserve junction
-positions, symbol placements/rotations, individual wires, metadata, zoom and pan in `.ccproj.json`
+positions, symbol placements/rotations, wire bends, metadata, zoom and pan in `.ccproj.json`
 files. Opening a project clears old results/history and restores its editable
 graph. Unsaved changes offer Save / Discard / Cancel; canceled or failed saves
 keep your document open. Camera changes mark the project dirty without discarding
@@ -296,14 +309,14 @@ valid electrical results. A different window size may clamp the restored pan.
 **Export circuit** saves resolved electrical connectivity and metadata only;
 it does not mark your graphical project saved. The two formats are separate.
 Limits: 100 free junctions, 200 components, 500 total nodes (including terminals),
-800 wires and 200 DC unknowns. Electrical imports retain the 100-node limit.
+800 wires, 32 bends per wire and 200 DC unknowns. Electrical imports retain the 100-node limit.
 A wire that shorts both terminals of a component
 produces an explicit unsupported-short error.
 
 Open the included graphical project directly:
 
 ```text
-python -m circuit_calculator gui examples/placed-divider.ccproj.json
+python -m circuit_calculator gui examples/routed-divider.ccproj.json
 ```
 
 The equivalent installed command is `circuit-calculator gui FILE.ccproj.json`.
@@ -312,19 +325,23 @@ No cached simulation results or Undo/Redo history are loaded from disk.
 See [SCHEMATIC_FORMAT.md](docs/SCHEMATIC_FORMAT.md) for the strict project schema,
 limits, API and atomic-save semantics.
 
-New project saves use version 2; the original `examples/divider.ccproj.json`
-remains a supported version-1 example. Moving or rotating a junction-based
+New project saves use version 3; `examples/divider.ccproj.json` (v1) and
+`examples/placed-divider.ccproj.json` (v2) remain supported and unchanged.
+Older application versions cannot open v3 saves; use Save As to keep an original
+file when needed. Moving or rotating a junction-based
 component gives it dedicated terminals wired back to its original junctions;
 Undo restores the exact previous graph. Terminals move/delete with their body.
-Wires are straight connections; segment routing/splitting remains planned.
+Wires support straight/diagonal segments with explicit bends and splitting.
+Automatic orthogonal routing, bend dragging and obstacle avoidance remain planned.
 The electrical model and solver stay independent of Tk and layout coordinates.
 See [COMPONENT_EDITING.md](docs/COMPONENT_EDITING.md) for geometry and migration rules.
+See [WIRE_ROUTING.md](docs/WIRE_ROUTING.md) for routing, splitting and crossing rules.
 
 ## Future roadmap
 
 The following are planned ideas and are **not implemented**:
 
-- Multi-segment wire routing, explicit segment splitting and richer schematic editing.
+- Wire bend handles, orthogonal routing, copy/paste and richer schematic editing.
 - Extended DC analysis with controlled sources and equivalent-port calculations.
 - RC and RLC circuit analysis.
 

@@ -1,6 +1,6 @@
 # Desktop GUI decision and incremental editor contracts
 
-Date: 2026-10-27. Phase 6 begins with a bounded network editor; the complete
+Updated 2026-10-28. Phase 6 begins with a bounded network editor; the complete
 schematic editor remains incremental. Existing staged PERSIST-1 work is preserved.
 
 ## Framework decision
@@ -35,8 +35,8 @@ A wire explicitly joins two junction identities. Wire-connected nodes resolve
 by union into an electrical net named after its first declared node. The selected
 reference junction identifies the zero-volt net. Coincident coordinates,
 crossings, overlapping edges and dragging near an item never create connections.
-To connect crossing wires, add/select an explicit junction and connect endpoints
-to it. This batch does not automatically split wire segments or infer T-junctions.
+To connect crossing wires, use the explicit Split Wire workflow in WIRE_ROUTING.md.
+Segments are never split automatically, and no T-junctions are inferred.
 
 Moving a junction preserves all endpoint identities. Deleting one removes its
 incident components and wires, and clears reference if necessary. Every edit is
@@ -62,14 +62,16 @@ networks, not cancellation of arbitrary long numerical jobs.
 
 Native v1 circuit files preserve electrical connectivity and metadata only.
 Export resolves wires into nets; importing one arranges junctions automatically.
-GUI-2 added project v1; GUI-3 saves project v2 and continues to load v1. It preserves
+GUI-2 added project v1, GUI-3 added placements in v2, and GUI-4 saves bends in v3
+while continuing to load v1/v2. It preserves
 original junctions, coordinates, symbol placements, individual wires, metadata,
 zoom and pan. History, tool/selection and
 simulation results are not saved. Open/Save Project and Import/Export Circuit are
 distinct controls. See SCHEMATIC_FORMAT.md for strict schema/save semantics.
 
 Free component placement/rotation and explicit terminal wiring are verified in
-GUI-3. Multi-segment wire routing, automatic segment splitting,
+GUI-3. GUI-4 adds polyline bends, reroute/straighten and explicit segment splitting
+with junction creation/reuse. Automatic orthogonal routing, bend dragging,
 copy/paste and the complete phase-6 workflow remain planned. Do not mark phase 6
 complete. Tests must cover topology independent of geometry, net merge/split,
 orientation, delete/undo, stale-result rejection, analytical export/load/solve

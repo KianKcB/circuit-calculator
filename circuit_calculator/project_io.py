@@ -1,4 +1,4 @@
-"""Strict schematic-project v1/v2 loading and v2 saving."""
+"""Strict schematic-project v1/v2/v3 loading and v3 saving."""
 
 from dataclasses import dataclass, field
 from decimal import Decimal
@@ -7,8 +7,8 @@ import math
 from ._document_io import (string_field, object_fields, loads_json, dumps_json,
                            read_utf8, atomic_write)
 from .circuit_io import document_from_data, document_to_data, CircuitFormatError
-from .schematic import (Schematic, Position, Wire, ComponentPlacement,
-                        MAX_NODES, MAX_JUNCTIONS, MAX_ELEMENTS, MAX_WIRES)
+from .schematic import (Schematic, Position, Wire, Waypoint, ComponentPlacement,
+                        MAX_NODES, MAX_JUNCTIONS, MAX_ELEMENTS, MAX_WIRES, MAX_BENDS)
 
 MAX_BYTES = 1_048_576
 MAX_DEPTH = 16
@@ -68,8 +68,8 @@ def _from_data(data):
     _fields(data, ('format', 'version', 'document', 'layout', 'view'), 'project')
     if data['format'] != 'circuit-calculator-project':
         raise ProjectFormatError('project.format must be circuit-calculator-project; use Import Circuit for electrical documents')
-    if type(data['version']) is not int or data['version'] not in (1, 2):
-        raise ProjectFormatError('project.version must be the supported integer 1 or 2')
+    if type(data['version']) is not int or data['version'] not in (1, 2, 3):
+        raise ProjectFormatError('project.version must be the supported integer 1, 2 or 3')
     version = data['version']
     try:
         document = document_from_data(data['document'])
@@ -112,11 +112,20 @@ def _from_data(data):
             raise ProjectFormatError(f'{label}: {error}') from error
     for index, wire in enumerate(wires):
         label = f'layout.wires[{index}]'
-        _fields(wire, ('name', 'first', 'second'), label)
+        _fields(wire, ('name', 'first', 'second', 'bends') if version == 3 else ('name', 'first', 'second'), label)
         for name in ('name', 'first', 'second'):
             _name(wire[name], label + '.' + name)
         try:
-            parsed_wires.append(Wire(**wire))
+            bends = wire.get('bends', [])
+            if not isinstance(bends, list) or len(bends) > MAX_BENDS:
+                raise ProjectFormatError(f'{label}.bends must be an array of at most {MAX_BENDS} bends')
+            parsed_bends = []
+            for index, bend in enumerate(bends):
+                bend_label = f'{label}.bends[{index}]'
+                _fields(bend, ('x', 'y'), bend_label)
+                parsed_bends.append(Waypoint(_number(bend['x'], bend_label + '.x'),
+                                             _number(bend['y'], bend_label + '.y')))
+            parsed_wires.append(Wire(wire['name'], wire['first'], wire['second'], parsed_bends))
         except (ValueError, TypeError) as error:
             raise ProjectFormatError(f'{label}: {error}') from error
     _fields(data['view'], ('zoom', 'scroll_x', 'scroll_y'), 'view')
@@ -139,11 +148,13 @@ def dumps_project(project: SchematicProject) -> str:
         document = document_to_data(schematic.document)
     except (ValueError, TypeError) as error:
         raise ProjectFormatError(f'project.document: {error}') from error
-    data = {'format': 'circuit-calculator-project', 'version': 2, 'document': document,
+    data = {'format': 'circuit-calculator-project', 'version': 3, 'document': document,
             'layout': {
                 'positions': [{'node': p.node, 'x': _number(p.x, 'position.x'), 'y': _number(p.y, 'position.y')}
                               for p in schematic.positions],
-                'wires': [{'name': w.name, 'first': w.first, 'second': w.second} for w in schematic.wires],
+                'wires': [{'name': w.name, 'first': w.first, 'second': w.second,
+                           'bends': [{'x': _number(p.x, 'bend.x'), 'y': _number(p.y, 'bend.y')} for p in w.bends]}
+                          for w in schematic.wires],
                 'placements': [{'element': p.element, 'x': _number(p.x, 'placement.x'),
                                 'y': _number(p.y, 'placement.y'), 'rotation': p.rotation}
                                for p in schematic.placements]},

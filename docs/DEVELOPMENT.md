@@ -10,7 +10,7 @@ The installable package requires Python >=3.11. Maintained CI targets CPython
 3.11-3.14 on Windows and Linux; other versions/platforms are not in the matrix.
 This replaces the previously unverified README Python 3.7 support claim. The
 installed flat imports and root launcher remain supported. The current
-local package version is 0.5.0; no release or registry publication has occurred.
+local package version is 0.6.0; no release or registry publication has occurred.
 The project's license is still undecided; no license grant is invented by packaging.
 
 For source development on Windows:
@@ -101,16 +101,19 @@ Launch `python -m circuit_calculator gui --example` in a desktop session with Tk
 Tk is optional in some Python distributions; install it using that distributor's
 instructions. NumPy remains optional until simulation. Keep editing/connectivity
 logic in schematic.py, rendering/dialogs in gui.py, and solver/math in dc.py.
-Read GUI_DESIGN.md and COMPONENT_EDITING.md before extending wiring or layout.
-SCHEMATIC_FORMAT.md defines graphical project v2, with v1 loading, separately
+Read GUI_DESIGN.md, COMPONENT_EDITING.md and WIRE_ROUTING.md before extending layout.
+SCHEMATIC_FORMAT.md defines graphical project v3, with v1/v2 loading, separately
 from electrical circuit v1. The placed example can be launched with
-`python -m circuit_calculator gui examples/placed-divider.ccproj.json`.
+`python -m circuit_calculator gui examples/routed-divider.ccproj.json`.
 Use project_io.py for projects and circuit_io.py for electrical export/import;
 keep shared parsing/file primitives in _document_io.py. Never compile wires
 merely to save a project, and never persist trusted/cached numerical results.
 
-Run `python -B scripts/check_gui.py -v` for 24 Tk widget/workflow checks with
-a display and NumPy available. These tests are opt-in: the regular 199-test suite
+Run `python -B scripts/check_gui.py -v` for 33 Tk widget/workflow checks with
+a display and NumPy available. These tests are opt-in: the regular 214-test suite
 remains headless and needs no Tk import. Hosted CI currently exercises editor
 logic and package imports, not the interactive Tk tests. A future display-enabled
 CI lane can run them without weakening the core/DC dependency boundary.
+The Tk test harness joins its workers and collects obsolete widget cycles on
+the owning thread between windows; do not leave old Tk interpreters for a later
+solver worker's cyclic garbage collection.

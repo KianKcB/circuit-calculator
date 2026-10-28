@@ -123,18 +123,20 @@ class ComponentEditingTests(unittest.TestCase):
         session.redo()
         self.assertEqual(session.state.compile(), original.compile())
 
-    def test_v1_loading_preserves_graph_and_saves_as_strict_v2(self):
+    def test_v1_loading_preserves_graph_and_saves_as_current_version(self):
         fixture = Path(__file__).resolve().parents[1] / 'examples/divider.ccproj.json'
         # Installed verification copies tests away from the checkout: construct
         # the v1 shape as a fallback instead of requiring installed example data.
         v1 = json.loads(dumps_project(SchematicProject(divider_example())))
         del v1['layout']['placements']
         v1['version'] = 1
+        for wire in v1['layout']['wires']:
+            del wire['bends']
         project = loads_project(json.dumps(v1))
         self.assertEqual(project.schematic, divider_example())
         if fixture.exists():
             self.assertEqual(load_project(fixture).schematic, divider_example())
-        self.assertEqual(json.loads(dumps_project(project))['version'], 2)
+        self.assertEqual(json.loads(dumps_project(project))['version'], 3)
         for change in ('placements', 'wire_limit'):
             invalid = json.loads(json.dumps(v1))
             if change == 'placements':
@@ -144,7 +146,7 @@ class ComponentEditingTests(unittest.TestCase):
             with self.subTest(change=change), self.assertRaises(ProjectFormatError):
                 loads_project(json.dumps(invalid))
 
-    def test_v2_round_trip_preserves_placements_and_rejects_invalid_records(self):
+    def test_current_round_trip_preserves_placements_and_rejects_invalid_records(self):
         project = SchematicProject(placed_divider_example())
         text = dumps_project(project)
         self.assertEqual(loads_project(text), project)

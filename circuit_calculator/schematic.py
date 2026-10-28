@@ -11,6 +11,7 @@ MAX_JUNCTIONS = 100
 MAX_NODES = 500
 MAX_ELEMENTS = 200
 MAX_WIRES = 800
+MAX_BENDS = 32
 
 
 def terminals(element):
@@ -55,16 +56,43 @@ class Position:
 
 
 @dataclass(frozen=True)
+class Waypoint:
+    x: float
+    y: float
+
+    def __post_init__(self):
+        Position('bend', self.x, self.y)
+
+
+def project_segment(x, y, first, second):
+    """Nearest point and distance on a finite segment, with clamped fraction."""
+    dx, dy = second[0] - first[0], second[1] - first[1]
+    square = dx * dx + dy * dy
+    fraction = max(0, min(1, ((x - first[0]) * dx + (y - first[1]) * dy) / square)) if square else 0
+    point = (first[0] + fraction * dx, first[1] + fraction * dy)
+    return point, math.hypot(x - point[0], y - point[1])
+
+
+@dataclass(frozen=True)
 class Wire:
     name: str
     first: str
     second: str
+    bends: tuple = ()
 
     def __post_init__(self):
         if not isinstance(self.name, str) or not self.name.strip():
             raise ValueError('Wire name must be non-empty text')
         if self.first == self.second:
             raise ValueError('A wire must join distinct junctions')
+        if isinstance(self.bends, (str, bytes)):
+            raise TypeError('Wire bends must be Waypoint values')
+        bends = tuple(self.bends)
+        if len(bends) > MAX_BENDS:
+            raise ValueError('Wire limit: at most 32 bends')
+        if not all(type(point) is Waypoint for point in bends):
+            raise TypeError('Wire bends must be Waypoint values')
+        object.__setattr__(self, 'bends', bends)
 
 
 @dataclass(frozen=True)
@@ -283,6 +311,63 @@ class Schematic:
 
     def add_wire(self, wire):
         return replace(self, wires=(*self.wires, wire))
+
+    def _wire(self, name):
+        wire = next((w for w in self.wires if w.name == name), None)
+        if wire is None:
+            raise ValueError('Select an existing wire')
+        return wire
+
+    def wire_points(self, name):
+        wire = self._wire(name)
+        positions = {p.node: (p.x, p.y) for p in self.positions}
+        return (positions[wire.first], *((p.x, p.y) for p in wire.bends), positions[wire.second])
+
+    def route_wire(self, name, bends):
+        wire = replace(self._wire(name), bends=bends)
+        return replace(self, wires=tuple(wire if w.name == name else w for w in self.wires))
+
+    def nearest_wire_segment(self, name, x, y):
+        Waypoint(x, y)
+        points = self.wire_points(name)
+        candidates = [(index, *project_segment(x, y, first, second))
+                      for index, (first, second) in enumerate(zip(points, points[1:])) if first != second]
+        if not candidates:
+            raise ValueError('This wire has no nonzero segment to split')
+        return min(candidates, key=lambda candidate: candidate[2])
+
+    def split_wire(self, name, segment, x, y, *, junction=None):
+        """Explicitly split one segment, optionally joining an existing free node."""
+        wire = self._wire(name)
+        point = Waypoint(x, y)
+        points = self.wire_points(name)
+        if type(segment) is not int or not 0 <= segment < len(points) - 1:
+            raise ValueError('Choose a valid wire segment')
+        first, second = points[segment:segment + 2]
+        _, distance = project_segment(x, y, first, second)
+        if first == second or distance > 1e-8:
+            raise ValueError('Split point must lie on a nonzero wire segment')
+        if (x, y) in (points[0], points[-1]):
+            raise ValueError('Choose the interior of the wire; endpoints are already connected')
+        state = self
+        if junction is None:
+            junction = _next_id('n', self.document.circuit.nodes)
+            state = self.add_node(junction, x, y)
+        else:
+            if junction in self.terminal_owners() or junction in (wire.first, wire.second):
+                raise ValueError('Choose an existing free junction inside the wire')
+            existing = next((p for p in self.positions if p.node == junction), None)
+            if existing is None or (existing.x, existing.y) != (x, y):
+                raise ValueError('Existing junction must be at the split point')
+        left, right = list(wire.bends[:segment]), list(wire.bends[segment:])
+        while left and left[-1] == point:
+            left.pop()
+        while right and right[0] == point:
+            right.pop(0)
+        replacement = (Wire(name, wire.first, junction, left),
+                       Wire(_next_id('W', {w.name for w in self.wires}), junction, wire.second, right))
+        wires = tuple(part for w in self.wires for part in (replacement if w.name == name else (w,)))
+        return replace(state, wires=wires)
 
     def set_reference(self, name):
         return replace(self, document=self._circuit(reference_node=name))

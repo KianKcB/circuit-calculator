@@ -6,6 +6,7 @@ not turn core-only installations into skipped-test failures.
 """
 
 from concurrent.futures import Future
+import gc
 from pathlib import Path
 import sys
 import tempfile
@@ -20,11 +21,172 @@ import tkinter as tk
 from circuit_calculator.circuit_io import load_document
 from circuit_calculator.dc import solve_dc
 from circuit_calculator.gui import CircuitEditor
-from circuit_calculator.schematic import Wire, divider_example
+from circuit_calculator.schematic import Wire, Waypoint, Position, Schematic, divider_example
+from circuit_calculator.circuit import Circuit
+from circuit_calculator.circuit_io import CircuitDocument
 from circuit_calculator.project_io import load_project, save_project, SchematicProject
 
 
 class TkWorkflowTests(unittest.TestCase):
+    def crossing(self):
+        self.app._reset_document(Schematic(CircuitDocument(Circuit(('a', 'b', 'c', 'd'), (), 'a')),
+            (Position('a', 100, 300), Position('b', 500, 300), Position('c', 300, 100), Position('d', 300, 500)),
+            (Wire('H', 'a', 'b'), Wire('V', 'c', 'd'))))
+
+    def test_route_bends_preview_completion_and_one_step_undo(self):
+        original = self.app.session.state
+        self.mode('wire')
+        self.app.click(self.node('in'))
+        self.app.click(self.point(300, 80))
+        self.app.route_motion(self.point(500, 80))
+        self.assertTrue(self.app.canvas.find_withtag('route-preview'))
+        self.assertEqual(self.app.session.state, original)
+        self.assertFalse(self.app.dirty)
+        self.app.click(self.point(500, 80))
+        self.app.click(self.node('out'))
+        wire = self.app.session.state.wires[-1]
+        self.assertEqual(wire.bends, (Waypoint(300, 80), Waypoint(500, 80)))
+        self.assertIsNone(self.app.pending)
+        self.assertFalse(self.app.canvas.find_withtag('route-preview'))
+        coords = self.app.canvas.coords(self.app.canvas.find_withtag('entity:wire:' + wire.name)[0])
+        self.assertEqual(len(coords), 8)
+        self.app.undo()
+        self.assertEqual(self.app.session.state, original)
+
+    def test_cancel_and_backspace_preserve_saved_graph_view_and_result(self):
+        self.app.simulate()
+        self.wait_for_result()
+        original, result = self.app._snapshot(), self.app.session.result
+        self.mode('wire')
+        self.app.click(self.node('in'))
+        self.app.click(self.point(300, 80))
+        self.app.click(self.point(400, 80))
+        self.app.remove_bend()
+        self.assertEqual(self.app.route_bends, [Waypoint(300, 80)])
+        # A distant preview must never expand the persistent scroll region.
+        self.app.route_motion(self.point(10000, 10000))
+        self.app.cancel()
+        self.assertEqual(self.app._snapshot(), original)
+        self.assertIs(self.app.session.result, result)
+        self.assertFalse(self.app.dirty)
+        self.assertFalse(self.app.canvas.find_withtag('route-preview'))
+
+    def test_reroute_straighten_and_wrong_end_preserve_connections(self):
+        original = self.app.session.state
+        self.app.selected = ('wire', 'W1')
+        self.app.reroute_wire()
+        self.app.click(self.point(500, 500))
+        self.app.click(self.point(160, 500))
+        self.app.click(self.node('in'))
+        self.assertEqual(self.app.session.state, original)
+        self.assertEqual(self.app.routing_wire, 'W1')
+        self.assertIn('original ending', self.app.status.get())
+        self.app.click(self.node('g'))
+        self.assertEqual(self.app.session.state.compile(), original.compile())
+        self.assertEqual(self.app.session.state.wires[0].bends, (Waypoint(500, 500), Waypoint(160, 500)))
+        self.app.straighten_wire()
+        self.assertEqual(self.app.session.state, original)
+        self.app.undo()
+        self.assertEqual(len(self.app.session.state.wires[0].bends), 2)
+
+    def test_bend_limit_keeps_pending_route_and_document_unchanged(self):
+        original = self.app.session.state
+        self.mode('wire')
+        self.app.click(self.node('in'))
+        for i in range(32):
+            self.app.click(self.point(800 + (i % 2) * 20, 80))
+        self.app.click(self.point(900, 80))
+        self.assertEqual(len(self.app.route_bends), 32)
+        self.assertEqual(self.app.pending, 'in')
+        self.assertEqual(self.app.session.state, original)
+        self.assertIn('32 bends', self.app.status.get())
+        self.app.cancel()
+
+    def test_split_one_wire_at_crossing_then_explicitly_join_other(self):
+        self.crossing()
+        original = self.app.session.state
+        self.mode('split')
+        self.app.click(self.point(300, 300))
+        self.assertEqual(self.app.session.state, original, 'Ambiguous split must not choose a wire')
+        self.assertIn('intended wire', self.app.status.get())
+        self.mode('select')
+        self.app.click(self.point(200, 300))
+        self.assertEqual(self.app.selected, ('wire', 'H'))
+        self.mode('split')
+        self.app.click(self.point(300, 300))
+        first = self.app.session.state
+        junction = first.document.circuit.nodes[-1]
+        self.assertEqual(first.compile(), original.compile())
+        self.assertNotEqual(first.net_names()['a'], first.net_names()['c'])
+        self.mode('select')
+        self.app.click(self.point(300, 200))
+        self.assertEqual(self.app.selected, ('wire', 'V'))
+        self.mode('split')
+        self.app.click(self.node(junction))
+        self.assertEqual(set(self.app.session.state.net_names().values()), {'a'})
+        self.app.undo()
+        self.assertEqual(self.app.session.state, first)
+        self.app.undo()
+        self.assertEqual(self.app.session.state, original)
+
+    def test_split_bent_wire_zoomed_away_from_nodes_and_bend_hit(self):
+        self.app._apply(self.app.session.state.route_wire('W1', (Waypoint(500, 500), Waypoint(160, 500))))
+        original = self.app.session.state.compile()
+        self.app.change_zoom(1.25)
+        self.mode('split')
+        self.app.click(self.point(300, 503))
+        self.assertEqual(self.app.session.state.compile(), original)
+        junction = self.app.session.state.positions[-1]
+        self.assertAlmostEqual(junction.x, 300)
+        self.assertAlmostEqual(junction.y, 500)
+        self.mode('select')
+        self.app.click(self.point(500, 500))
+        self.assertEqual(self.app.selected, ('wire', 'W1'))
+
+    def test_split_at_endpoint_rejected_and_component_terminal_protected(self):
+        self.crossing()
+        original = self.app.session.state
+        self.mode('split')
+        self.app.click(self.node('a'))
+        self.assertEqual(self.app.session.state, original)
+        self.assertIn('endpoints', self.app.status.get())
+        self.app._apply(original.add_placed_component('resistor', 'R', 360, 300, 1))
+        original = self.app.session.state
+        terminal = original.document.circuit.elements[0].node_a
+        self.app.click(self.node(terminal))
+        self.assertEqual(self.app.session.state, original)
+        self.assertIn('component terminal', self.app.status.get())
+
+    def test_deleting_wire_cancels_pending_reroute(self):
+        self.app.selected = ('wire', 'W1')
+        self.app.reroute_wire()
+        self.app.delete()
+        self.assertIsNone(self.app.routing_wire)
+        self.assertIsNone(self.app.pending)
+        self.app.click(self.node('out'))
+        self.assertEqual(self.app.pending, 'out')
+
+    def test_routed_split_project_reopen_and_electrical_export(self):
+        self.app._apply(self.app.session.state.route_wire('W1', (Waypoint(500, 500), Waypoint(160, 500))))
+        self.mode('split')
+        self.app.click(self.point(300, 500))
+        expected = self.app.session.state
+        path = self.project_path()
+        with patch('tkinter.filedialog.asksaveasfilename', return_value=str(path)):
+            self.assertTrue(self.app.save_project())
+        self.assertEqual(load_project(path).schematic, expected)
+        with patch('tkinter.filedialog.askopenfilename', return_value=str(path)):
+            self.app.open_project()
+        self.assertEqual(self.app.session.state, expected)
+        self.assertFalse(self.app.dirty)
+        self.app.simulate()
+        self.wait_for_result()
+        self.assertIn('out: 8', self.app.results.get('1.0', 'end'))
+        exported = path.with_name('electrical.json')
+        with patch('tkinter.filedialog.asksaveasfilename', return_value=str(exported)):
+            self.app.export()
+        self.assertEqual(load_document(exported), divider_example().compile())
+
     def setUp(self):
         self.root = tk.Tk()
         self.root.withdraw()
@@ -37,6 +199,10 @@ class TkWorkflowTests(unittest.TestCase):
             self.app.closed = True
             self.app.worker.shutdown(wait=True, cancel_futures=True)
             self.root.destroy()
+        # Dispose all prior Tk cycles on their owning thread, before a later
+        # NumPy worker allocation can trigger cyclic GC on another thread.
+        del self.app, self.root
+        gc.collect()
 
     def point(self, x, y):
         canvas = self.app.canvas

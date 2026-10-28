@@ -18,12 +18,16 @@ resolution and revision-scoped undo/results. `gui.py` renders that state with Tk
 and invokes the existing DC solver on a worker thread. The UI thread alone
 updates widgets, and results are accepted only for the submitted revision.
 Native electrical export compiles wires into nets; graphical persistence is a
-separate version-2 schema in project_io.py, with version-1 loading retained. It
+separate version-3 schema in project_io.py, with version-1/2 loading retained. It
 embeds the original uncompiled CircuitDocument, node positions, individual wires,
 ComponentPlacement values and a ViewState. Dedicated component terminal nodes keep
 their identity through movement/rotation; coordinates never determine connectivity.
 Legacy shared-junction elements acquire dedicated terminals and explicit wires
 on their first body move/rotation. See COMPONENT_EDITING.md for invariants.
+Wire owns an immutable tuple of Waypoint bends. Path points use node positions
+at the ends and fixed world-coordinate bends inside; only Wire.first/second
+participate in net resolution. Splitting explicitly creates/reuses a junction
+and replaces one wire with two while partitioning its geometry. See WIRE_ROUTING.md.
 _document_io.py shares bounded JSON and atomic-file primitives between both file
 formats. Circuit I/O exposes validated data adapters for embedding without
 relaxing its existing schema. See SCHEMATIC_FORMAT.md and GUI_DESIGN.md.
@@ -32,6 +36,10 @@ Opening a project/new/import resets history while incrementing the existing
 monotonic revision. Dirty state compares graph and view against the last clean
 snapshot, independently of simulation results. Camera-only changes preserve
 results; document boundaries clear them and reject old pending completions.
+Pending route previews live only in the editor controller, outside Schematic
+and the persistent scroll region. Completing one route is one history entry;
+Escape cancels without changing graph, dirty state or results. Other committed
+edits cancel pending routes to avoid stale wire/endpoint references.
 
 Packaging declares the application package and installed compatibility modules
 explicitly. Canonical imports use circuit_calculator; compat/ aliases retain

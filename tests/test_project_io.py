@@ -76,7 +76,7 @@ class ProjectTests(unittest.TestCase):
     def test_root_and_version_validation(self):
         for value in (None, [], 1, 'project'):
             self.reject(value, 'object')
-        for version in (True, 1.0, '1', None, 0, 3):
+        for version in (True, 1.0, '1', None, 0, 4):
             value = data()
             value['version'] = version
             self.reject(value, 'version')

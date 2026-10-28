@@ -52,13 +52,20 @@ are not available until the workflow has actually been committed/pushed and run.
   attached-wire invariants, legacy conversion for R/V/I, invalid geometry and
   limit rollback, deletion/reference cleanup, exact Undo, strict v1/v2 project
   compatibility and analytical placed-divider results.
+- Wire routing suite: owned/bounded bends, fixed interior geometry during movement,
+  reroute identity, diagonal/degenerate segment projection, split path partition,
+  explicit crossing merge and deletion split, rollback at limits, Undo/Redo,
+  strict v1/v2/v3 compatibility and analytical routed-divider equivalence.
 - Opt-in Tk checks: `python -B scripts/check_gui.py -v` in a display session with
-  NumPy. Twenty-four tests exercise canvas hit targets/movement, creation/edit errors,
+  NumPy. Thirty-three tests exercise canvas hit targets/movement, creation/edit errors,
   reference/delete/undo, async success/failure/stale results, zoom and export/open,
   graphical save/reopen/view state, cancellation, failed saves/loads, dirty-state
   restoration and stale completion across document boundaries; blank placement,
   terminal wiring/reference, body drag/rotate, click-only selection, legacy
   conversion/Undo, terminal deletion protection and placed-project reopening.
+  Routing checks cover preview/completion, cancel/Backspace, bend limits,
+  reroute/straighten, explicit crossing splits/joins, zoomed path hit targets,
+  endpoint/terminal rejection, stale-route cancellation and routed save/export.
 - DC assembly: explicit hand-written MNA matrix and RHS; topology errors.
 - DC solution: hand-derived divider, parallel, supernode, balanced/unbalanced
   bridges and multiple-source results. KCL at reference and other nodes,
@@ -78,7 +85,22 @@ Runtime tolerances and conditioning policy are documented in ARCHITECTURE.md.
 Expected reference answers are derived independently and must not be changed to
 accommodate an implementation error.
 
-## Latest local run: 2026-10-27
+## Latest local run: 2026-10-28
+
+GUI-4: **214 headless tests** passed on Python 3.11.9 and 3.14.6. Without
+site-packages, **195 passed, 19 expected NumPy skips**. Both interpreters passed
+**33 Tk workflow tests**. Fifteen new headless tests and nine new Tk tests cover
+routes/splits and v1/v2/v3 compatibility. The routed/split/save/load divider
+retains 8 V output, 4 mA resistor current and -0.048 W source power. An initial
+expanded Tk run exposed cross-thread collection of obsolete test-window cycles;
+the harness now joins workers and collects those cycles on the main thread.
+Current runs pass with normal garbage collection enabled. Fresh wheel checks on
+both interpreters passed 195 tests with 19 expected skips without NumPy, then all
+214 under NumPy 2.4.6. Installed command/import compatibility, routed/split project
+persistence, pip dependency checks and editable imports passed. The live routed
+layout, Split Wire, Undo and F5 were visually checked; output remains 8 V with
+-0.048 W source power and zero reported KCL/power residuals. Wheel modules match
+the checkout; old/new examples compile equivalently. No hosted CI claim.
 
 GUI-3: all 199 headless tests passed on Python 3.11.9 and 3.14.6. Without
 site-packages, 181 passed with 18 expected optional-NumPy skips. All 24 opt-in Tk

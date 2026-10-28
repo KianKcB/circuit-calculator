@@ -1,5 +1,30 @@
 # Decisions
 
+## 2026-10-28: GUI-4 explicit wire geometry and splitting
+
+Add frozen Waypoint bends directly to Wire, retaining the three-argument Wire
+constructor and existing endpoint/net semantics. Keep geometry out of Circuit
+and DC. Use world-coordinate polylines; moving an endpoint retains interior
+bends, with no hidden orthogonal rerouting or connectivity changes. Bound each
+wire to 32 bends and reuse existing coordinate/strict-JSON validation.
+
+Pending routes live outside Schematic/history and outside the saved scroll region.
+Commit completion once; allow cancel/Backspace with no document changes. Existing
+wire rerouting must keep both endpoints and name, preventing accidental rewiring.
+Other committed edits cancel pending routes to avoid stale references.
+
+Split one chosen segment only. Preserve the first half's name and allocate a
+second name; create a new junction unless a free junction is explicitly reused.
+Geometry alone never reuses nodes. At overlaps require an intended wire selection;
+joining a crossing takes two explicit splits using the same junction. Reject
+component-terminal reuse, original endpoints and zero-length segments. Use a
+1e-8-world-unit roundoff tolerance only inside the explicit split operation.
+
+Save required bend arrays in project v3. Load original v1/v2 unchanged with empty
+bends; preserve both older fixtures. Older applications reject v3, so keep originals
+with Save As. Electrical format stays v1; local package becomes 0.6.0. No new
+devices, dependencies or numerical algorithms. See WIRE_ROUTING.md.
+
 ## 2026-10-27: GUI-3 dedicated terminals and project v2
 
 Store ComponentPlacement in Schematic, keeping geometry out of Circuit and the DC

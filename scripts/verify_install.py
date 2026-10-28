@@ -72,8 +72,10 @@ from circuit_calculator.circuit import Circuit, Resistor, VoltageSource
 from circuit_calculator.dc import solve_dc
 from circuit_calculator.circuit_io import CircuitDocument, save_document, load_document
 from circuit_calculator.project_io import SchematicProject, ViewState, save_project, load_project
-from circuit_calculator.schematic import placed_divider_example
-project = SchematicProject(placed_divider_example().rotate_component('R1'), ViewState(1.25, .2, .3))
+from circuit_calculator.schematic import Waypoint, placed_divider_example
+state = placed_divider_example().rotate_component('R1').route_wire('W1', (Waypoint(500, 500), Waypoint(160, 500)))
+state = state.split_wire('W1', 1, 300, 500)
+project = SchematicProject(state, ViewState(1.25, .2, .3))
 project_path = folder / 'installed-example.ccproj.json'
 save_project(project, project_path)
 if load_project(project_path) != project:

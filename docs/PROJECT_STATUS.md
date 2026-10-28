@@ -1,9 +1,9 @@
 # Project status and continuation
 
-Date: 2026-10-27. GUI-2 was committed as `f68462d`; GUI-3 began with a
-clean working tree. Current GUI-3 changes are local and uncommitted; no staging,
-commit, push or branch operation was performed. Package version is now 0.5.0;
-electrical document v1 and schematic-project v2 are separate formats. Project-v1
+Date: 2026-10-28. GUI-3 was committed as `c0951d8`; GUI-4 began with a
+clean working tree. Current GUI-4 changes are local and uncommitted; no staging,
+commit, push or branch operation was performed. Package version is now 0.6.0;
+electrical document v1 and schematic-project v3 are separate formats. Project-v1/v2
 loading remains supported.
 Use README and DEVELOPMENT.md for current package paths/commands; historical
 batch entries below retain their original snapshot names and results.
@@ -472,14 +472,80 @@ a body. Geometry edits conservatively clear simulation results. No hosted CI or
 cross-platform GUI validation is claimed. The complete phase-6 milestone remains
 in progress.
 
+## Batch GUI-4: routed wires and explicit segment splitting
+
+Status: source, Tk, compatibility, physical equivalence and fresh wheel/editable
+installation VERIFIED locally. The full phase-6 milestone remains in progress.
+
+Base `c0951d8`, initially clean. No unrelated modifications or new dependencies.
+Design contract: WIRE_ROUTING.md; schema: SCHEMATIC_FORMAT.md; rationale: DECISIONS.md.
+
+- Wire owns immutable Waypoint bends (32 maximum); existing three-argument
+  construction remains compatible. Only endpoint identities resolve electrical
+  nets. Bends/crossings/overlap cannot connect nodes. Endpoint movement retains
+  interior world-coordinate bends; geometry can include diagonal segments.
+- Schematic exposes path points, nearest-segment projection, route replacement
+  and explicit splitting. Splitting preserves route portions and the original
+  first-half name, allocates a second wire name, and creates a junction unless an
+  existing free junction is explicitly reused. Reject original endpoints,
+  degenerate segments, component-terminal reuse, invalid geometry and limits
+  before replacing state. One split of a crossing affects only the chosen wire.
+- GUI Wire clicks add pending bends between explicit dots. Dashed previews stay
+  outside saved graph/scroll bounds; Escape cancels, Backspace removes a bend.
+  Reroute/straighten preserve endpoint identities; reroute must finish at the
+  original ending dot. Invalid route input preserves pending work for correction.
+  Other committed edits cancel pending routes to avoid stale references.
+- Split Wire uses projected segment hits. At overlaps, select the intended wire
+  away from the crossing first. To join both wires, split each explicitly using
+  the same junction. Undo/Redo restores exact paths/topology. No implicit splits.
+- Project v3 requires bounded x/y bend records on every wire; load v1/v2 with no
+  bends and strict old schemas. Older fixture files remain unchanged. The separate
+  examples/routed-divider.ccproj.json demonstrates a v3 routed/split divider.
+  Native electrical format/model/solver/formula behavior remains unchanged.
+- Fifteen headless and nine Tk tests cover ownership, movement, path partition,
+  diagonal/degenerate projection, explicit net merge/split, limit/error rollback,
+  exact history, strict version migration and real route/file/export workflows.
+  Installed smoke checks round-trip a placed/rotated/routed/split project.
+
+Source verification: `python -B -m unittest -q` and the `py -3.14` equivalent
+passed **214 tests** each. Without site-packages: **195 passed, 19 expected NumPy
+skips**. Both Python 3.11.9 and 3.14.6 passed **33 opt-in Tk workflow tests**.
+Analytical routed/split/save/load result: **out=8 V**, **R1 current=0.004 A**,
+**V1 power=-0.048 W**, balanced total power. The first expanded Tk run exposed
+Tcl cleanup on a worker thread; the harness now joins workers and collects obsolete
+test-window cycles on the owning thread, with normal GC still enabled.
+Live routed layout and explicit segment split inspected using the computer-use
+skill. Ctrl+Z restored the saved layout; Select mode and F5 left the preview open
+with out=8 V, V1=-0.048 W and zero reported KCL/power residuals. No original
+example or user document was overwritten.
+
+Fresh installation checks on Python 3.11.9 and 3.14.6 each passed **195 tests
+with 19 expected skips** without NumPy, then **214 tests with no skips** under
+NumPy 2.4.6. Both passed pip check, canonical/legacy command/module identity,
+routed/split project round trips and editable imports outside the checkout.
+Commands: `python -B scripts/check_distributions.py` and the `py -3.14` equivalent.
+An isolated build produced the 0.6.0 wheel from its source archive. Wheel modules
+match the checkout; v1/v2/v3 examples compile to the same electrical document.
+Syntax, local Markdown links and `git diff --check` passed. Core electrical
+model/solver/formula files and existing v1/v2 fixtures are unchanged; the index
+is empty. No hosted CI run is claimed.
+
+Limits: manually entered straight/diagonal segments, no bend dragging, automatic
+orthogonal routing or obstacle avoidance. Splitting permits 1e-8 world units of
+geometric roundoff only within the explicit operation. At self-overlapping path
+segments the nearest segment is used, with the first segment winning ties. Bends
+remain fixed during endpoint movement. New saves need a v3-capable app; preserve
+older originals with Save As. No hosted CI or cross-platform GUI result is claimed.
+Phase 6 remains in progress.
+
 ## Exact next action
 
-Review GUI-3 as a coherent commit candidate.
-Suggested commit message: `Add independent component placement and rotation`.
+Review GUI-4 as a coherent commit candidate.
+Suggested commit message: `Add routed wires and explicit junction splitting`.
 The user handles staging/commits/pushes; the index has not been changed.
 
-Next batch: specify multi-segment wire geometry and explicit segment splitting
-with junction creation, preserving terminal identities and crossing/proximity
-semantics. Decide schema compatibility before changing it; extend net merge/split,
-Undo and Tk routing tests. Add a display-enabled CI lane when practical, and
-inspect hosted CI evidence after a user push. Do not mark phase 6 complete yet.
+Next batch: specify bend handles and optional orthogonal routing, with clear
+endpoint-movement, cancel and Undo rules. Keep connections identity-based, reuse
+the v3 schema when feasible, and add constrained-route/geometry/GUI tests. Add a
+display-enabled CI lane when practical and inspect hosted evidence after a user
+push. Do not mark phase 6 complete yet.

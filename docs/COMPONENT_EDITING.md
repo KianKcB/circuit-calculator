@@ -1,5 +1,9 @@
 # GUI-3: placed symbols and terminal identity
 
+Historical GUI-3 contract. GUI-4 extends wire geometry/project persistence;
+see [WIRE_ROUTING.md](WIRE_ROUTING.md) and [SCHEMATIC_FORMAT.md](SCHEMATIC_FORMAT.md)
+for current routing and v1/v2/v3 compatibility. Placement invariants below remain.
+
 Design contract, 2026-10-27. Preserve Circuit, R/V/I constitutive laws and DC
 solver behavior. Geometry never creates electrical connections.
 

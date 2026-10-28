@@ -1,16 +1,16 @@
-# Schematic project format v2, with v1 loading
+# Schematic project format v3, with v1/v2 loading
 
-Date: 2026-10-27. A separate UTF-8 JSON document preserves editor state without
+Date: 2026-10-28. A separate UTF-8 JSON document preserves editor state without
 changing native electrical circuit format v1. File suffix: `.ccproj.json`.
 
 ```text
 {
   "format": "circuit-calculator-project",
-  "version": 2,
+  "version": 3,
   "document": <complete native electrical document v1, before wire resolution>,
   "layout": {
     "positions": [{"node": "g", "x": 160.0, "y": 420.0}, ...],
-    "wires": [{"name": "W1", "first": "return", "second": "g"}, ...],
+    "wires": [{"name": "W1", "first": "return", "second": "g", "bends": [{"x": 500.0, "y": 500.0}, ...]}, ...],
     "placements": [{"element": "R1", "x": 330.0, "y": 160.0, "rotation": 0}, ...]
   },
   "view": {"zoom": 1.0, "scroll_x": 0.0, "scroll_y": 0.0}
@@ -42,7 +42,7 @@ window/viewport size may clamp fractions to keep the view inside its scroll regi
 Tk also quantizes scrolling to pixel boundaries.
 View numbers round to normal floats, with no arbitrary epsilon acceptance.
 
-Every v2 layout requires `placements`, including an empty array for a wholly
+Every v2/v3 layout requires `placements`, including an empty array for a wholly
 junction-based graph. Each record has exactly element/x/y/rotation; element is a
 unique existing component name, at most 256 characters. Rotation must be an integer
 0, 90, 180 or 270 (clockwise). Coordinates follow the position numeric rules.
@@ -51,16 +51,25 @@ directly; wires may connect to them. Terminal positions must exactly match the
 center plus/minus 60 world units on the rotated axis. No tolerance repairs or
 coordinate-inferred connectivity are performed. See COMPONENT_EDITING.md.
 
+Every v3 wire requires `bends`, an array of at most 32 objects with exactly x/y.
+Coordinates follow the position rules (finite numbers, +/-100000, no booleans or
+nonzero underflow). An empty array denotes a straight wire. The path runs from
+first node position through the bends to second node position. Bends are never
+electrical nodes; geometry and crossings cannot create connectivity. Consecutive
+coincident points are legal after endpoint movement. See WIRE_ROUTING.md.
+
 ## Version compatibility
 
 The loader accepts v1's original shape with only positions/wires in layout, at
 most 100 nodes and 400 wires. It preserves the original graph/geometry with an
 empty placement list; it does not convert components on load. V1 rejects a
-placements field. Unsupported versions are errors. All new saves use v2, even
-if there are no placements. Older application versions cannot read v2; keep an
-original v1 file or use Save As when compatibility with an older application is
-needed. Native electrical import/export remains format v1 and contains no layout.
-The existing v1 divider fixture is retained alongside a separate v2 placed example.
+placements field. V2 adds placements and uses the current node/wire limits, but
+has no bends field. Both old versions load with empty bend tuples and reject
+the new field. Unsupported versions are errors. All new saves use v3, even for
+straight wires. Older application versions cannot read v3; keep an original
+file or use Save As when compatibility with an older application is needed.
+Native electrical import/export remains format v1 and contains no layout.
+Original v1/v2 fixtures remain unchanged beside a separate v3 routed example.
 
 APIs in project_io.py: frozen ViewState and SchematicProject containers,
 `dumps_project` / `loads_project`, `save_project` / `load_project`.
@@ -92,5 +101,6 @@ save/load/compile/solve equivalence, GUI save/reopen/dirty/cancel/failure workfl
 stale-result rejection across document boundaries, and fresh installed API/CLI
 checks. GUI-3 additionally verifies rotation/movement preserve terminal identity,
 source polarity and compile/solve equivalence, strict placement geometry, v1
-loading and v2 output. Local package is 0.5.0; native electrical format remains v1.
-No new devices or solver algorithms are added; wires remain straight connections.
+loading and v2 output. GUI-4 verifies routed paths/splits, strict bend schema,
+v1/v2 compatibility and v3 output. Local package is 0.6.0; native electrical format
+remains v1. No new devices or solver algorithms are added.
