@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-10-28: DC-GRID manufactured-grid numerical reference
+
+Use an affine voltage field on a positive-resistance square grid, with independent
+boundary constraints, to obtain an exact oracle without another numerical solver.
+Check every voltage/current/power, source KCL and aggregate energy, plus source/
+element ordering and reference shifts. Keep fixtures in the test suite, shared by
+the source/sdist benchmark script. Do not add benchmark fixtures to the product API.
+
+Limit the diagnostic to N<=12 (188 unknowns) to stay within the native command's
+200-unknown guard. Record warmup/timed scope, backend versions, engine/reference
+hashes, samples and independent errors. Do not turn machine-specific timing into
+a CI threshold or claim arbitrary scaling/SPICE equivalence. See DC_VALIDATION.md.
+No numerical algorithm, model, dependency or package version change is required.
+
 ## 2026-10-28: CI-GUI isolated installed display checks
 
 Add optional --gui verification after fresh core/DC wheel tests, before editable

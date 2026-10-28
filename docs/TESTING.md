@@ -91,6 +91,9 @@ modules into sys.path. This needs a desktop display or an external Xvfb wrapper.
   invalidation, canceled/declined/failed writes, current-project protection and
   stale worker completion without opening an export dialog.
 - DC assembly: explicit hand-written MNA matrix and RHS; topology errors.
+- Grid reference suite: affine voltage fields on 2x2 through 12x12 resistor grids,
+  independent boundary-source currents, every branch's V/I/P, KCL at all nodes,
+  aggregate resistor/source power, node/element order and nonzero reference shifts.
 - DC solution: hand-derived divider, parallel, supernode, balanced/unbalanced
   bridges and multiple-source results. KCL at reference and other nodes,
   constitutive relationships and total absorbed/delivered power are checked
@@ -110,6 +113,17 @@ Expected reference answers are derived independently and must not be changed to
 accommodate an implementation error.
 
 ## Latest local run: 2026-10-28
+
+DC-GRID: **248 headless tests** passed on Python 3.11.9 and 3.14.6; without
+site-packages **225 passed with 23 expected NumPy skips**. Three grid tests were
+added. Warmed 4/8/12 grids (28/92/188 unknowns) passed the independent oracle on
+NumPy 1.26.4 and 2.5.2. Both native CLI paths solved the 188-unknown case and
+exported 1,073 CSV rows with exact JSON/CSV node values. See DC_VALIDATION.md for
+raw measurement scope, accuracy and environment-specific timings. Application
+code is unchanged since RESULTS-1, so the prior 54 source/installed Tk workflows
+remain the relevant GUI evidence; no redundant GUI rerun is claimed. Final fresh
+installs passed 225 core tests with 23 expected skips, then all 248 under NumPy
+2.4.6, on both interpreters. Command/CSV/origin/dependency/editable checks passed.
 
 CI-GUI: workflow YAML parsed and 8 core/DC plus 2 installed-GUI jobs checked.
 Both local Windows interpreters passed 224 core tests with 21 expected NumPy

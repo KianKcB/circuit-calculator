@@ -9,7 +9,7 @@ direction; research items require a separate feasibility decision.
 | 0 Audit | VERIFIED | All six source/document/test files plus ignore rules and Git state inspected; 59 baseline tests passed; findings in PROJECT_STATUS.md. |
 | 1 Foundation | IN PROGRESS | NUM-1 numerical repairs verified. PKG-1 package and fresh core/DC installations verified on Windows Python 3.11/3.14. CI configured for Windows/Linux 3.11-3.14; hosted runs pending. |
 | 2 Circuit model | VERIFIED for current DC subset | Immutable nodes and R/V/I components, explicit orientation and declared reference. Solver adds topology checks. Persistence, hierarchy and multi-terminal components remain planned. |
-| 3 Linear DC | VERIFIED for documented small-network subset | MNA, node voltages, all branch currents/power, topology and numerical diagnostics. Analytical examples and conservation tests required. No claim of arbitrary-range or large-network reliability. |
+| 3 Linear DC | VERIFIED for documented small-network subset | MNA, node voltages, branch currents/power, topology/numerical diagnostics and analytical conservation checks. Affine resistor grids now verify 28/92/188-unknown cases and reference/order invariance. No arbitrary-range/large-network claim. See DC_VALIDATION.md. |
 | 4 Advanced DC | NOT STARTED | Controlled sources, wires/zero-ohm contraction, equivalent ports, superposition, floating-subnetwork policy and broader conditioning study; depend on phase 3. Each needs independent references and uniqueness tests. |
 | 5 Persistence/netlists | VERIFIED for native JSON v1 | Metadata, deterministic round trips, strict size/schema validation and atomic no-clobber saves pass source and installed tests. SPICE/text netlist interoperability remains future work. |
 | 6 First GUI | IN PROGRESS | GUI-6 separates Canvas rendering, adds measured Fit Circuit and center-preserving zoom/reset/resize. Bend/placement/routing/file workflows remain available; project v3 is unchanged. Broader editing and usability remain incremental. See VIEWPORT.md. |
@@ -24,16 +24,16 @@ direction; research items require a separate feasibility decision.
 | 15 SPICE interoperability | NOT STARTED | Selected syntax and external benchmark suite; backend/version/license review first. Reject unsupported directives and document model differences. |
 | 16 Specialized analysis | DEFERRED | Small-signal, noise, pole-zero, distortion, multiport, thermal and transmission-line features each require a separate mathematical specification and references. |
 | 17 Research extensions | DEFERRED | Mixed-signal, RF/distributed, multiphysics, fitting, optimization, plugins and external APIs; feasibility and maintenance assessment before approval. |
-| 18 Distribution/maintenance | IN PROGRESS | Local package 0.9.0 retains project v3 and v1/v2 loading, with separate CSV results v1. CI configured; hosted evidence pending. Publishing, licensing, releases, benchmarks and broader migrations remain planned. |
+| 18 Distribution/maintenance | IN PROGRESS | Local package 0.9.0, project v3/backward loading and CSV results v1. Isolated installed Tk checks and Linux display CI configured; hosted evidence pending. Bounded grid timing/accuracy script available. Publishing, licensing, releases and broader benchmarks remain planned. |
 
 ## Next reviewable batches
 
-1. Inspect first hosted CI run after the user pushes; local package checks are complete.
-2. Complete RESULTS-1 verification/commit; GUI-5 is committed as 0087d36 and GUI-6
-   as 199bb16.
-3. Validate/commit the installed-GUI checker and configured Linux display matrix,
-   then strengthen analytical solver validation at larger supported sizes. Keep
-   local/hosted and numerical/performance evidence separate.
+1. Inspect hosted CI evidence after the next user push; local package checks are complete.
+2. Review the committed GUI-5, GUI-6, RESULTS-1 and CI-GUI batches (0087d36,
+   199bb16, 03abb65, 84a8bfd) and the bounded grid-validation batch.
+3. Next implement scoped name/property editing and component duplication/copy
+   workflows, with terminal ownership/history/file equivalence tests. Keep the
+   full phase-6 milestone in progress; obtain hosted CI evidence after a user push.
 
 PERSIST-1/GUI-1 are committed as c4a13dd and REORG-1 as 992fbac. GUI-2 project
 persistence is committed as f68462d, GUI-3 as c0951d8, and GUI-4 as 9dc4c4c.

@@ -1,6 +1,6 @@
 # Project status and continuation
 
-Date: 2026-10-28. RESULTS-1 was committed as `03abb65`; CI-GUI began with a
+Date: 2026-10-28. CI-GUI was committed as `84a8bfd`; DC-GRID began with a
 clean working tree and no unrelated changes. The user has now authorized staging
 and committing completed local batches; pushing remains a separate action.
 Package version is now 0.9.0;
@@ -664,7 +664,7 @@ are applied. Project v3/native circuit v1 stay unchanged. Hosted CI remains unve
 ## Batch CI-GUI: isolated installed Tk checks and Linux display configuration
 
 Status: local installed-Windows path VERIFIED on both interpreters; Linux hosted
-matrix CONFIGURED, execution UNVERIFIED.
+matrix CONFIGURED, execution UNVERIFIED. Committed as `84a8bfd`.
 
 Base `03abb65`, initially clean. No application/schema/dependency change.
 
@@ -686,9 +686,50 @@ installed Tk workflows**, followed by editable checks. Python 3.14 passed the sa
 hosted/Linux execution is CONFIGURED and
 UNVERIFIED. No push, CI dispatch or publication performed.
 
+## Batch DC-GRID: manufactured-grid validation and bounded measurements
+
+Status: source, independent analytical oracle, native/CSV integration, fresh
+core/DC installs and bounded measurement reports VERIFIED locally.
+
+Base `84a8bfd`, initially clean. No application/model/solver/dependency change.
+DC_VALIDATION.md proves the affine-voltage oracle and records measurement scope.
+
+- test_dc_grid.py generates positive-resistance grids with independent boundary
+  voltage constraints. Every node/branch, source current, independent KCL and
+  resistor/source power is checked against the closed-form field. Ordering and a
+  nonzero reference shift are tested. Standard-library assembly checks counts and
+  limits without NumPy; two solution methods skip only when NumPy is absent.
+- benchmark_dc.py shares this test fixture, performs one warmup per size, validates
+  every timed solve and records raw timing samples, versions, engine/reference
+  hashes, independent errors and conservation. Reports refuse replacement. The
+  helper is for checkouts/sdists, not a new product API or a timing pass/fail gate.
+- 4/8/12 grids give 28/92/188 unknowns. The largest case has 145 nodes and 308
+  elements, within the native-command unknown guard but beyond editor import/
+  element caps. Both native commands solved it and exported 1,073 CSV records,
+  with exact JSON/CSV node recovery and full-branch analytical verification.
+
+Source suite: **248 passed** on Python 3.11.9 and 3.14.6. Without site-packages:
+**225 passed, 23 expected NumPy skips**. Three grid tests were added. Timed
+source runs used NumPy **1.26.4** and **2.5.2**; largest-case maximum node error
+was **1.78e-15 V**, branch-current error **2.72e-18 A** or less, independent KCL
+**3.53e-18 A** or less, and resistor power exactly **0.04125 W** to displayed
+precision. Environment-specific medians are in DC_VALIDATION.md; they are not
+cross-version performance guarantees. Fresh installed checks on both interpreters
+passed **225 core tests with 23 expected skips**, then **248 tests with no skips**
+under NumPy 2.4.6, plus command/CSV/origin/dependency/editable checks. The prior
+54 source/installed Tk workflows remain valid for unchanged application code.
+Benchmark help works without NumPy, the missing-dependency hint exits 1, and bad
+size/repeat arguments exit 2 (verified via native Python subprocess return codes).
+The DC engine/model/formula files are byte-for-byte unchanged in Git from 9dc4c4c.
+
+Limits: small homogeneous linear grids, no pathological-conditioning study or
+external SPICE comparison. No claim of arbitrary-range/large-network reliability.
+Package 0.9.0, native v1/project v3/CSV v1 remain unchanged. Hosted Linux CI is
+still unverified; no push/dispatch/publication performed.
+
 ## Exact next action
 
-Commit CI-GUI. Then validate the DC engine against larger
-manufactured resistor grids with a closed-form voltage field, boundary source
-currents and total power; record a bounded timing/accuracy report. Keep numerical
-verification distinct from industrial/performance guarantees. No push authorized.
+Review the five completed batches at this clean local commit checkpoint. Next scope is
+collision-safe component/junction naming/property editing and isolated component
+duplication, with endpoint/history/file tests. Keep full phase 6 in progress.
+Obtain hosted CI evidence after a user push; pushing is not authorized here.

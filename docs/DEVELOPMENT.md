@@ -128,10 +128,15 @@ keep shared parsing/file primitives in _document_io.py. Never compile wires
 merely to save a project, and never persist trusted/cached numerical results.
 
 Run `python -B scripts/check_gui.py -v` for 54 Tk widget/workflow checks with
-a display and NumPy available. These tests are opt-in: the regular 245-test suite
+a display and NumPy available. These tests are opt-in: the regular 248-test suite
 remains headless and needs no Tk import. Hosted CI currently exercises editor
 logic and package imports, not the interactive Tk tests. A future display-enabled
 CI lane can run them without weakening the core/DC dependency boundary.
+For bounded analytical grid timing/accuracy reports, run
+`python -B scripts/benchmark_dc.py --sizes 4 8 12 --repeats 3`.
+See DC_VALIDATION.md for the oracle proof, CLI/native integration, measured
+environments and limitations. These are diagnostic measurements, not timing gates.
+
 The Tk test harness joins its workers and collects obsolete widget cycles on
 the owning thread between windows; do not leave old Tk interpreters for a later
 solver worker's cyclic garbage collection.
