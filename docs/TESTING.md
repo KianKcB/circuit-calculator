@@ -28,6 +28,13 @@ advice and explicitly accept optional-solver skips.
 
 The GitHub workflow targets CPython 3.11–3.14 on Windows/Linux. Hosted results
 are not available until the workflow has actually been committed/pushed and run.
+An additional Ubuntu 24.04 installed-GUI matrix (3.11/3.14) is configured under
+Xvfb after the eight core/DC jobs; hosted execution remains unverified.
+
+`python -B scripts/check_distributions.py --gui` additionally runs all Tk workflows
+inside the fresh installed DC environment before switching it to editable mode.
+The child uses `-I` and `--installed`, verifies origins and never inserts source
+modules into sys.path. This needs a desktop display or an external Xvfb wrapper.
 
 ## Layers and references
 
@@ -103,6 +110,12 @@ Expected reference answers are derived independently and must not be changed to
 accommodate an implementation error.
 
 ## Latest local run: 2026-10-28
+
+CI-GUI: workflow YAML parsed and 8 core/DC plus 2 installed-GUI jobs checked.
+Both local Windows interpreters passed 224 core tests with 21 expected NumPy
+skips, 245 full DC tests and 54 isolated installed Tk workflows, followed by
+editable checks. Product origins were verified inside the fresh environments.
+No hosted Linux execution is claimed.
 
 RESULTS-1: **245 headless tests** passed on Python 3.11.9 and 3.14.6; without
 site-packages **224 passed with 21 expected NumPy skips**. Both interpreters passed

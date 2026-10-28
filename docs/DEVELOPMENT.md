@@ -70,6 +70,20 @@ Official checkout/setup-python actions are pinned to verified v7 commit SHAs;
 contents permission is read-only and checkout credentials are not persisted.
 Local success is not proof that hosted jobs have run. No upload/publish step exists.
 
+A separate installed-GUI job targets Ubuntu 24.04 with Python 3.11 and 3.14,
+after the eight core/DC jobs. It installs explicit Tk/Xvfb/xauth runtime packages,
+builds the distribution and runs `scripts/check_distributions.py --gui` under a
+virtual display. The checker runs `python -I -B scripts/check_gui.py --installed`
+inside its fresh DC environment, checking product module origins before Tk tests.
+Source-mode GUI checks remain available; core-only checks never require a display.
+Run `python -B scripts/check_distributions.py --gui` locally when a display exists.
+This lane is CONFIGURED; hosted Linux execution has not been verified here.
+
+References: [Ubuntu 24.04 runner image](https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md)
+and [Ubuntu xvfb-run manual](https://manpages.ubuntu.com/manpages/noble/man1/xvfb-run.1.html).
+Xvfb/xauth are explicitly installed rather than relying on an image's preinstalled
+packages. No new third-party action is added; existing pinned action revisions remain.
+
 Before each feature, document scope, physical laws, units, sign conventions,
 degenerate cases, API, compatibility, alternatives and acceptance tests. Keep
 domain data, numerical algorithms and I/O separate. Run focused tests, then the

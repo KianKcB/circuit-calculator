@@ -1,6 +1,6 @@
 # Project status and continuation
 
-Date: 2026-10-28. GUI-6 was committed as `199bb16`; RESULTS-1 began with a
+Date: 2026-10-28. RESULTS-1 was committed as `03abb65`; CI-GUI began with a
 clean working tree and no unrelated changes. The user has now authorized staging
 and committing completed local batches; pushing remains a separate action.
 Package version is now 0.9.0;
@@ -623,7 +623,7 @@ No hosted CI result claimed. Phase 6 remains in progress.
 ## Batch RESULTS-1: full-precision DC CSV export
 
 Status: source, Tk, fresh wheel/editable checks and actual CLI JSON/CSV comparison
-VERIFIED locally; prepared for the authorized local commit.
+VERIFIED locally; committed as `03abb65`.
 
 Base `199bb16`, initially clean; no new dependencies or circuit/project schema change.
 RESULTS_CSV.md specifies the versioned long-form export and failure behavior.
@@ -661,8 +661,34 @@ Limits: CSV describes compiled electrical nets, not every graphical alias. It is
 an export, not a circuit/result-cache import format. No display prefixes/rounding
 are applied. Project v3/native circuit v1 stay unchanged. Hosted CI remains unverified.
 
+## Batch CI-GUI: isolated installed Tk checks and Linux display configuration
+
+Status: local installed-Windows path VERIFIED on both interpreters; Linux hosted
+matrix CONFIGURED, execution UNVERIFIED.
+
+Base `03abb65`, initially clean. No application/schema/dependency change.
+
+- check_gui.py --installed requires Python -I and verifies product module origins
+  inside the fresh environment. It does not insert the checkout into sys.path.
+  Normal source GUI checks remain available without new product requirements.
+- check_distributions.py --gui runs these installed widget workflows after fresh
+  DC verification and before editable mode. Default core/DC checks remain headless.
+- Workflow adds two Ubuntu 24.04 GUI jobs (Python 3.11/3.14), dependent on the eight
+  existing core/DC jobs. Explicit Tk/Xvfb/xauth packages, a 1600x1200 virtual screen,
+  existing pinned actions, read-only permissions and 15-minute limits are configured.
+  Primary runner/manpage references are linked in DEVELOPMENT.md.
+
+Workflow YAML parsed; 8 core/DC plus 2 GUI jobs, dependencies, matrix, commands
+and permissions validated locally. Python 3.11 fresh installed checks passed
+**224 core tests plus 21 expected skips**, **245 DC tests**, and **54 isolated
+installed Tk workflows**, followed by editable checks. Python 3.14 passed the same
+224/245/54 checks, with origin and editable verification. These are Windows results;
+hosted/Linux execution is CONFIGURED and
+UNVERIFIED. No push, CI dispatch or publication performed.
+
 ## Exact next action
 
-Commit RESULTS-1 with explicit paths. Then configure a bounded
-Linux display-enabled Tk CI lane and strengthen analytical grid/size validation
-of the existing DC solver. No push is authorized; do not claim hosted results.
+Commit CI-GUI. Then validate the DC engine against larger
+manufactured resistor grids with a closed-form voltage field, boundary source
+currents and total power; record a bounded timing/accuracy report. Keep numerical
+verification distinct from industrial/performance guarantees. No push authorized.

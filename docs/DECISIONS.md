@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-10-28: CI-GUI isolated installed display checks
+
+Add optional --gui verification after fresh core/DC wheel tests, before editable
+installation. Installed widget tests require Python -I and verify application
+module origins, preventing the source checkout from masking packaging omissions.
+Default core/DC workflows remain display-free. Validate this path locally on both
+Windows interpreters; do not represent it as Linux/hosted evidence.
+
+Configure two Ubuntu 24.04 GUI jobs (Python 3.11/3.14) after the existing eight
+core/DC jobs. Install Tk/Xvfb/xauth explicitly and use xvfb-run with a 1600x1200
+virtual screen. Keep read-only permissions, pinned existing actions, 15-minute
+timeouts and no publication. See DEVELOPMENT.md for primary references. Workflow
+YAML/matrix checks are local configuration validation, not a hosted test result.
+
 ## 2026-10-28: RESULTS-1 full-precision SI CSV
 
 Keep numerical solving separate from results_io.py. Export the accepted DCResult

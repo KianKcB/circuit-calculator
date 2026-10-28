@@ -1,6 +1,7 @@
 """Opt-in real Tk widget/workflow tests. Requires a desktop display and [dc].
 
-Run: python -B scripts/check_gui.py
+Run source: python -B scripts/check_gui.py
+Run installed: python -I -B scripts/check_gui.py --installed
 This script is separate from headless discovery so an optional GUI/display does
 not turn core-only installations into skipped-test failures.
 """
@@ -8,6 +9,7 @@ not turn core-only installations into skipped-test failures.
 from concurrent.futures import Future
 import csv
 import gc
+import importlib.util
 from pathlib import Path
 import sys
 import tempfile
@@ -16,7 +18,19 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+if '--installed' in sys.argv:
+    sys.argv.remove('--installed')
+    if not sys.flags.isolated:
+        raise RuntimeError('Installed GUI checks require Python -I isolation')
+    for module in ('circuit_calculator', 'circuit_calculator.gui', 'circuit_calculator.canvas_renderer',
+                   'circuit_calculator.viewport', 'circuit_calculator.results_io',
+                   'circuit_calculator.schematic', 'circuit_calculator.dc', 'circuit_calculator.project_io'):
+        spec = importlib.util.find_spec(module)
+        if spec is None or spec.origin is None or not Path(spec.origin).resolve().is_relative_to(Path(sys.prefix).resolve()):
+            raise RuntimeError('GUI module did not come from installed environment: ' + module)
+    print('Installed GUI module origins verified.', flush=True)
+else:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import tkinter as tk
 from circuit_calculator.circuit_io import load_document

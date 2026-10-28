@@ -1,10 +1,11 @@
 """Check a built wheel in a fresh venv, first core-only and then with DC.
 
-Usage: python scripts/check_distributions.py
+Usage: python scripts/check_distributions.py [--gui]
 Uses only stdlib orchestration; pip downloads the pinned optional dependency.
 Existing environments are never modified. Temporary files stay in .build-check.
 """
 
+import argparse
 from pathlib import Path
 import subprocess
 import sys
@@ -13,6 +14,9 @@ import venv
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--gui', action='store_true', help='also run isolated installed Tk workflows; requires a display')
+    args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     # Select the declared version so old, user-retained build artifacts cannot
     # be mistaken for this release's wheel.
@@ -38,6 +42,8 @@ def main():
             '--only-binary=:all:', str(wheels[0]) + '[dc]')
         run('-m', 'pip', 'check')
         run('-B', root / 'scripts/verify_install.py', '--dc')
+        if args.gui:
+            run('-I', '-B', root / 'scripts/check_gui.py', '--installed', '-q')
         # An editable install must work outside the checkout as well; do not use
         # the wheel verifier's site-packages-origin requirement for source links.
         run('-m', 'pip', 'install', '--no-deps', '--editable', root)

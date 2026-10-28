@@ -31,8 +31,9 @@ direction; research items require a separate feasibility decision.
 1. Inspect first hosted CI run after the user pushes; local package checks are complete.
 2. Complete RESULTS-1 verification/commit; GUI-5 is committed as 0087d36 and GUI-6
    as 199bb16.
-3. Broaden display-enabled CI coverage and analytical solver validation at larger
-   supported sizes. Keep numerical evidence separate from performance claims.
+3. Validate/commit the installed-GUI checker and configured Linux display matrix,
+   then strengthen analytical solver validation at larger supported sizes. Keep
+   local/hosted and numerical/performance evidence separate.
 
 PERSIST-1/GUI-1 are committed as c4a13dd and REORG-1 as 992fbac. GUI-2 project
 persistence is committed as f68462d, GUI-3 as c0951d8, and GUI-4 as 9dc4c4c.
