@@ -56,6 +56,7 @@ class CircuitEditor:
                                ('Open Project', self.open_project), ('Save Project', self.save_project),
                                ('Save As', self.save_project_as), ('Import circuit', self.open),
                                ('Export circuit', self.export),
+                               ('Export CSV', self.export_results),
                                ('Undo', self.undo), ('Redo', self.redo),
                                ('Edit value', self.edit_value), ('Rotate 90°', self.rotate), ('Delete', self.delete),
                                ('Reroute wire', self.reroute_wire), ('Straighten', self.straighten_wire),
@@ -65,6 +66,8 @@ class CircuitEditor:
             button = ttk.Button(parent, text=label, command=command)
             button.pack(side='left', padx=2)
             self.buttons[label] = button
+            if label == 'Export CSV':
+                button.configure(state='disabled')
         self.orthogonal = tk.BooleanVar(value=False)
         self.horizontal_first = True
         ttk.Checkbutton(actions, text='Right-angle wires', variable=self.orthogonal,
@@ -171,6 +174,9 @@ class CircuitEditor:
         self.results.insert('1.0', text)
         self.results.configure(state='disabled')
 
+    def _export_availability(self):
+        self.buttons['Export CSV'].configure(state='normal' if self.session.result is not None else 'disabled')
+
     def change_mode(self):
         self.mode = self.tool.get()
         self._clear_route()
@@ -194,6 +200,7 @@ class CircuitEditor:
         if previous != self.session.revision:
             self._clear_route()
             self._text('Results cleared after edit.\nRun Simulate DC to analyze the current circuit.')
+            self._export_availability()
         self.draw()
         self._update_dirty()
 
@@ -629,6 +636,7 @@ class CircuitEditor:
             self.drag_node = self.drag_element = None
             self.drag_bend = self.selected_bend = None
             self._text('Results cleared after Undo/Redo. Run Simulate DC again.')
+            self._export_availability()
             self.draw()
             self._update_dirty()
 
@@ -703,6 +711,7 @@ class CircuitEditor:
         self._clean_project = self._snapshot()
         self._update_dirty()
         self._text('No current simulation result. Run Simulate DC for this document.')
+        self._export_availability()
 
     def new(self):
         if self._discard():
@@ -791,6 +800,28 @@ class CircuitEditor:
         except (ValueError, TypeError, OSError) as error:
             self._error(error)
 
+    def export_results(self):
+        from tkinter import filedialog, messagebox
+        from .results_io import save_results_csv
+        result = self.session.result
+        if result is None:
+            self.status.set('Run Simulate DC before exporting results.')
+            return
+        path = filedialog.asksaveasfilename(parent=self.root, defaultextension='.csv',
+            filetypes=[('DC results CSV', '*.csv')], confirmoverwrite=False)
+        if not path:
+            return
+        try:
+            try:
+                save_results_csv(result, path, protected_path=self.project_path)
+            except FileExistsError:
+                if not messagebox.askyesno('Replace results CSV?', 'Replace the selected results file?', parent=self.root):
+                    return
+                save_results_csv(result, path, overwrite=True, protected_path=self.project_path)
+            self.status.set('DC results exported as CSV in base SI units.')
+        except (ValueError, TypeError, OSError) as error:
+            self._error(error)
+
     def simulate(self):
         if self.future is not None:
             return
@@ -802,6 +833,7 @@ class CircuitEditor:
                 raise ValueError('GUI DC limit: 200 unknowns')
             from circuit_calculator.dc import solve_dc
             self.session.result = None
+            self._export_availability()
             self._text('Solving DC circuit…')
             self.submitted_revision = self.session.revision
             self.future = self.worker.submit(solve_dc, circuit)
@@ -835,6 +867,7 @@ class CircuitEditor:
                       f'KCL residual: {result.max_kcl_residual_amperes:.3g} A',
                       f'Power balance: {result.power_balance_watts:.3g} W']
             self._text('\n'.join(lines))
+            self._export_availability()
             self.status.set('DC solved. Results follow each component’s displayed terminal order.')
         except (ValueError, TypeError, ImportError) as error:
             if self.submitted_revision == self.session.revision:

@@ -12,6 +12,12 @@ and description without changing Circuit. Strict version-1 JSON schema, numerica
 conversion rules, limits and save semantics are defined in CIRCUIT_FORMAT.md.
 The DC file command in cli.py composes load -> size guard -> solve -> JSON
 presentation. Analysis limits do not prevent storing valid unsolvable descriptions.
+results_io.py exports the same DCResult as deterministic, full-precision CSV with
+explicit units and literal qualified identifiers. It shares atomic file primitives
+but never alters or reloads a circuit. The CLI retains JSON stdout and optionally
+writes CSV, protecting its input path. GUI export requires a current accepted result;
+camera actions preserve export availability while edits/history/loading clear it.
+See RESULTS_CSV.md for schema, path protection and failure behavior.
 
 `schematic.py` now owns immutable layout/junction/wire/component-placement state, explicit net
 resolution and revision-scoped undo/results. `gui.py` renders that state with Tk

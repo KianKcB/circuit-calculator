@@ -1,9 +1,9 @@
 # Project status and continuation
 
-Date: 2026-10-28. GUI-5 was committed as `0087d36`; GUI-6 began with a
+Date: 2026-10-28. GUI-6 was committed as `199bb16`; RESULTS-1 began with a
 clean working tree and no unrelated changes. The user has now authorized staging
 and committing completed local batches; pushing remains a separate action.
-Package version is now 0.8.0;
+Package version is now 0.9.0;
 electrical document v1 and schematic-project v3 are separate formats. Project-v1/v2
 loading remains supported.
 Use README and DEVELOPMENT.md for current package paths/commands; historical
@@ -585,7 +585,7 @@ Package 0.7.0, project v3, native electrical v1. Hosted CI remains unverified.
 ## Batch GUI-6: measured viewport and renderer separation
 
 Status: source, real Tk, fresh wheel/editable installation and visual checks
-VERIFIED locally; ready for an authorized local commit.
+VERIFIED locally; committed as `199bb16`.
 
 Base `0087d36`, initially clean. VIEWPORT.md records requirements and camera
 compatibility. No graph/device/solver changes, dependencies or schema migration.
@@ -620,8 +620,49 @@ View fractions remain v3 leading fractions, but older renderer bounds can produc
 a different camera view. Graph/layout and existing fixture files remain unchanged.
 No hosted CI result claimed. Phase 6 remains in progress.
 
+## Batch RESULTS-1: full-precision DC CSV export
+
+Status: source, Tk, fresh wheel/editable checks and actual CLI JSON/CSV comparison
+VERIFIED locally; prepared for the authorized local commit.
+
+Base `199bb16`, initially clean; no new dependencies or circuit/project schema change.
+RESULTS_CSV.md specifies the versioned long-form export and failure behavior.
+
+- results_io.py serializes existing DCResult snapshots with explicit V/A/W/1 units,
+  full float precision and signed currents/power. Reference/net/element/diagnostic
+  rows use deterministic ordering. Literal qualified identifiers preserve names
+  including Unicode, quotes, delimiters and control characters.
+- Validate result types, finite values and the zero-volt reference before atomic
+  output. Default writes refuse existing paths, replacement is explicit, and
+  protected input/project paths reject resolved/same-file aliases. No truncation.
+- `dc INPUT --csv OUTPUT [--overwrite-csv]` retains default JSON stdout. CSV is
+  produced only after a successful solve; CSV failure produces error/exit 1 and
+  no JSON. The input document cannot be replaced, even with the overwrite flag.
+- GUI Export CSV requires a current accepted result. Edits/history/new simulations/
+  document boundaries disable it; view changes preserve it. Cancel/decline/failure
+  leave graph, dirty state, result and output untouched. Stale workers cannot export.
+- Twelve headless and five Tk tests cover values/units/signs, exact float recovery,
+  Unicode/control quoting, literal identifiers, malformed data, atomic preservation,
+  path protection, JSON/CSV agreement and current/stale/canceled GUI workflows.
+  Installed command checks exercise optional CSV in canonical/legacy entry points,
+  including missing-NumPy failure without a created CSV.
+
+Source: **245 tests passed** on Python 3.11.9 and 3.14.6; without site-packages,
+**224 passed, 21 expected NumPy skips**. Both passed **54 Tk workflows**.
+Actual CLI JSON/CSV agree on **out=8 V** and **V1 power=-0.048 W** (16 CSV rows).
+Fresh installs on both interpreters passed **224 tests with 21 expected skips**
+in core-only mode, then **245 with no skips** under NumPy 2.4.6. CSV command
+checks passed through console, canonical module and legacy module entry points;
+missing NumPy creates no CSV. Origin, pip dependency and editable imports passed.
+The live GUI shows Export CSV disabled before simulation; no user document or
+existing example was replaced. Package 0.9.0 was built from its source archive.
+
+Limits: CSV describes compiled electrical nets, not every graphical alias. It is
+an export, not a circuit/result-cache import format. No display prefixes/rounding
+are applied. Project v3/native circuit v1 stay unchanged. Hosted CI remains unverified.
+
 ## Exact next action
 
-Commit GUI-6 with explicit paths. Next add CSV results
-export with exact values/units, input-file protection and stale-result guards;
-then add display-enabled CI coverage. No push is authorized.
+Commit RESULTS-1 with explicit paths. Then configure a bounded
+Linux display-enabled Tk CI lane and strengthen analytical grid/size validation
+of the existing DC solver. No push is authorized; do not claim hosted results.

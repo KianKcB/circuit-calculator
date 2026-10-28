@@ -6,6 +6,7 @@ not turn core-only installations into skipped-test failures.
 """
 
 from concurrent.futures import Future
+import csv
 import gc
 from pathlib import Path
 import sys
@@ -28,6 +29,95 @@ from circuit_calculator.project_io import load_project, save_project, SchematicP
 
 
 class TkWorkflowTests(unittest.TestCase):
+    def test_csv_export_current_result_preserves_document_view_and_numbers(self):
+        self.app.simulate()
+        self.wait_for_result()
+        self.assertFalse(self.app.buttons['Export CSV'].instate(['disabled']))
+        self.app.change_zoom(1.25)
+        original, result, revision = self.app._snapshot(), self.app.session.result, self.app.session.revision
+        path = self.project_path().with_suffix('.csv')
+        with patch('tkinter.filedialog.asksaveasfilename', return_value=str(path)):
+            self.app.export_results()
+        with path.open(encoding='utf-8', newline='') as stream:
+            rows = list(csv.DictReader(stream))
+        self.assertAlmostEqual(float(next(r['value'] for r in rows if r['identifier'] == 'node:out')), 8)
+        self.assertAlmostEqual(float(next(r['value'] for r in rows if r['identifier'] == 'element:V1' and r['quantity'] == 'power')), -.048)
+        self.assertEqual(self.app._snapshot(), original)
+        self.assertIs(self.app.session.result, result)
+        self.assertEqual(self.app.session.revision, revision)
+
+    def test_csv_unavailable_before_solve_after_edit_undo_and_during_new_solve(self):
+        with patch('tkinter.filedialog.asksaveasfilename') as dialog:
+            self.app.export_results()
+            dialog.assert_not_called()
+        self.assertTrue(self.app.buttons['Export CSV'].instate(['disabled']))
+        self.app.simulate()
+        self.wait_for_result()
+        self.app._apply(self.app.session.state.change_value('R1', 2000))
+        self.assertTrue(self.app.buttons['Export CSV'].instate(['disabled']))
+        self.app.undo()
+        self.assertTrue(self.app.buttons['Export CSV'].instate(['disabled']))
+        self.app.simulate()
+        self.wait_for_result()
+        result, future = self.app.session.result, Future()
+        with patch.object(self.app.worker, 'submit', return_value=future):
+            self.app.simulate()
+        self.assertTrue(self.app.buttons['Export CSV'].instate(['disabled']))
+        future.set_result(result)
+        self.wait_for_result()
+        self.assertFalse(self.app.buttons['Export CSV'].instate(['disabled']))
+
+    def test_csv_cancel_decline_replace_and_failure_preserve_file_and_result(self):
+        self.app.simulate()
+        self.wait_for_result()
+        path = self.project_path().with_suffix('.csv')
+        path.write_bytes(b'original')
+        original, result = self.app._snapshot(), self.app.session.result
+        with patch('tkinter.filedialog.asksaveasfilename', return_value=''):
+            self.app.export_results()
+        with patch('tkinter.filedialog.asksaveasfilename', return_value=str(path)), \
+             patch('tkinter.messagebox.askyesno', return_value=False):
+            self.app.export_results()
+        self.assertEqual(path.read_bytes(), b'original')
+        with patch('tkinter.filedialog.asksaveasfilename', return_value=str(path)), \
+             patch('circuit_calculator.results_io.save_results_csv', side_effect=PermissionError('simulated')):
+            self.app.export_results()
+        self.assertEqual(path.read_bytes(), b'original')
+        self.assertEqual(self.app._snapshot(), original)
+        self.assertIs(self.app.session.result, result)
+        self.assertFalse(self.app.buttons['Export CSV'].instate(['disabled']))
+        with patch('tkinter.filedialog.asksaveasfilename', return_value=str(path)), \
+             patch('tkinter.messagebox.askyesno', return_value=True):
+            self.app.export_results()
+        self.assertTrue(path.read_bytes().startswith(b'format_version,'))
+
+    def test_csv_export_protects_open_project_file(self):
+        path = self.project_path()
+        with patch('tkinter.filedialog.asksaveasfilename', return_value=str(path)):
+            self.app.save_project()
+        content = path.read_bytes()
+        self.app.simulate()
+        self.wait_for_result()
+        with patch('tkinter.filedialog.asksaveasfilename', return_value=str(path)), \
+             patch('tkinter.messagebox.askyesno') as replace:
+            self.app.export_results()
+            replace.assert_not_called()
+        self.assertIn('protected', self.app.status.get())
+        self.assertEqual(path.read_bytes(), content)
+
+    def test_csv_cannot_export_old_worker_result_after_document_edit(self):
+        result = solve_dc(self.app.session.state.compile().circuit)
+        future = Future()
+        with patch.object(self.app.worker, 'submit', return_value=future):
+            self.app.simulate()
+        self.app._apply(self.app.session.state.change_value('R1', 2000))
+        future.set_result(result)
+        self.wait_for_result()
+        self.assertTrue(self.app.buttons['Export CSV'].instate(['disabled']))
+        with patch('tkinter.filedialog.asksaveasfilename') as dialog:
+            self.app.export_results()
+            dialog.assert_not_called()
+
     def settle_viewport(self):
         self.root.deiconify()
         self.root.update()

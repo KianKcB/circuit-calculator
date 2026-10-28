@@ -46,7 +46,8 @@ for name in ('circuit_calculator', 'circuit_calculator.calculations',
              'circuit_calculator.dc', 'circuit_calculator.cli',
              'circuit_calculator.schematic', 'circuit_calculator.gui',
              'circuit_calculator.project_io', 'circuit_calculator._document_io',
-             'circuit_calculator.canvas_renderer', 'circuit_calculator.viewport'):
+             'circuit_calculator.canvas_renderer', 'circuit_calculator.viewport',
+             'circuit_calculator.results_io'):
     spec = importlib.util.find_spec(name)
     if spec is None or not Path(spec.origin).resolve().is_relative_to(environment):
         raise RuntimeError('Module did not come from installed environment: ' + name)
@@ -94,17 +95,27 @@ document_path = folder / 'installed-example.json'
 save_document(CircuitDocument(example, 'Installed example'), document_path)
 if load_document(document_path).circuit != example:
     raise RuntimeError('Installed persistence round trip failed')
-for argv in ([str(command), 'dc', str(document_path)],
+for index, argv in enumerate(([str(command), 'dc', str(document_path)],
              [sys.executable, '-I', '-m', 'main', 'dc', str(document_path)],
-             [sys.executable, '-I', '-m', 'circuit_calculator', 'dc', str(document_path)]):
+             [sys.executable, '-I', '-m', 'circuit_calculator', 'dc', str(document_path)])):
+    csv_path = folder / f'installed-results-{index}.csv'
+    argv = [*argv, '--csv', str(csv_path)]
     completed = subprocess.run(argv, text=True, encoding='utf-8', capture_output=True,
                                cwd=folder, timeout=30)
     if require_dc:
         import json
         if completed.returncode != 0 or abs(json.loads(completed.stdout)['node_voltages_volts']['a'] - 6) > 1e-12:
             raise RuntimeError('Installed DC command failed: ' + completed.stderr)
+        import csv
+        with csv_path.open(encoding='utf-8', newline='') as stream:
+            rows = list(csv.DictReader(stream))
+        current = next(r for r in rows if r['identifier'] == 'element:R' and r['quantity'] == 'current')
+        if abs(float(current['value']) - 2) > 1e-12 or current['unit'] != 'A':
+            raise RuntimeError('Installed results CSV value/units failed')
     elif completed.returncode != 1 or '[dc]' not in completed.stderr:
         raise RuntimeError('Installed DC command did not report missing optional dependency')
+    elif csv_path.exists():
+        raise RuntimeError('CSV was created without a successful solve')
 if not require_dc:
     try:
         solve_dc(example)

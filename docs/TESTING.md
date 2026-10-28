@@ -61,8 +61,11 @@ are not available until the workflow has actually been committed/pushed and run.
   generated-count rollback, history/format stability and analytical DC invariance.
 - Viewport suite: independent fit/scroll arithmetic, signed/extreme/tiny bounds,
   invalid inputs and renderer/view imports with no Tk/NumPy side effects.
+- Results CSV suite: independent values/signs/units, exact float recovery, quoting,
+  literal Unicode/control identifiers, strict result validation, atomic preservation,
+  path-alias protection, unchanged JSON plus optional CSV and CLI failures.
 - Opt-in Tk checks: `python -B scripts/check_gui.py -v` in a display session with
-  NumPy. Forty-nine tests exercise canvas hit targets/movement, creation/edit errors,
+  NumPy. Fifty-four tests exercise canvas hit targets/movement, creation/edit errors,
   reference/delete/undo, async success/failure/stale results, zoom and export/open,
   graphical save/reopen/view state, cancellation, failed saves/loads, dirty-state
   restoration and stale completion across document boundaries; blank placement,
@@ -77,6 +80,9 @@ are not available until the workflow has actually been committed/pushed and run.
   View tests map a real drawing area and verify full content/text fit, center
   preservation during zoom/reset/resize, graph/result/history invariance, signed
   and large layouts, handle/preview exclusion and saved fit-camera restoration.
+  CSV tests cover accepted results/camera preservation, edit/history/new-solve
+  invalidation, canceled/declined/failed writes, current-project protection and
+  stale worker completion without opening an export dialog.
 - DC assembly: explicit hand-written MNA matrix and RHS; topology errors.
 - DC solution: hand-derived divider, parallel, supernode, balanced/unbalanced
   bridges and multiple-source results. KCL at reference and other nodes,
@@ -97,6 +103,15 @@ Expected reference answers are derived independently and must not be changed to
 accommodate an implementation error.
 
 ## Latest local run: 2026-10-28
+
+RESULTS-1: **245 headless tests** passed on Python 3.11.9 and 3.14.6; without
+site-packages **224 passed with 21 expected NumPy skips**. Both interpreters passed
+**54 Tk workflows**. Twelve CSV/API/CLI tests and five GUI workflows were added.
+The actual divider command emitted JSON/CSV agreeing on out=8 V and source power
+=-0.048 W. Fresh core installs on both interpreters passed 224 tests with 21
+expected skips, then all 245 under NumPy 2.4.6. Console/canonical/legacy CSV
+commands, missing-dependency preservation, origins, pip check and editable imports
+passed. Circuit/project formats and numerical algorithms remain unchanged.
 
 GUI-6: **233 headless tests** passed on Python 3.11.9 and 3.14.6. Without
 site-packages: **213 passed, 20 expected NumPy skips**. Both interpreters passed

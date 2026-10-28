@@ -46,7 +46,7 @@ progress and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for development commands
   Windows and Linux. Newer versions are outside the current test matrix.
 - The formula CLI and circuit model need only the standard library. DC solving
   adds the optional NumPy dependency.
-- Version 0.8.0 is currently a local development package. Installation commands
+- Version 0.9.0 is currently a local development package. Installation commands
   below use this checkout; it has not been published to a package registry.
 
 Open a terminal in the project directory and check that Python is available:
@@ -256,6 +256,17 @@ with exit code 1; invalid command arguments use code 2. The dense DC command
 accepts at most 200 unknowns (non-reference nodes plus voltage-source currents).
 Running without arguments still opens the original formula menu.
 
+To also save the same results as full-precision CSV in base SI units:
+
+```text
+python -m circuit_calculator dc examples/divider.json --csv divider-results.csv
+```
+
+JSON stdout is unchanged. Existing CSV files require `--overwrite-csv`; the input
+circuit can never be replaced by this export. Rows identify the reference, net
+voltages, element voltages/currents/powers and numerical diagnostics, with explicit
+units and literal `node:`/`element:` identifiers. See [RESULTS_CSV.md](docs/RESULTS_CSV.md).
+
 ## Desktop DC network editor (prototype)
 
 ```text
@@ -288,6 +299,11 @@ for the framework decision and supported scope.
 5. Select **Simulate DC** or press F5. The example gives `out = 8 V`; results
    include node voltages, branch currents/power and conservation diagnostics.
    Edits clear results and stale worker results are discarded.
+
+**Export CSV** saves the current accepted DC result. It stays disabled before
+simulation and after edits/history/document changes; camera changes retain valid
+results. Exporting results does not save or alter the graphical project. The
+open project path is protected from replacement by a CSV export.
 
 Select a wire and choose **Reroute wire** to replace its bends, finishing at its
 original ending dot. **Straighten** removes its bends. These operations preserve

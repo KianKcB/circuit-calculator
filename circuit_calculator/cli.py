@@ -189,7 +189,7 @@ def run_cli(input_fn=None, output_fn=None):
 MAX_DC_UNKNOWNS = 200
 
 
-def _run_dc_file(path):
+def _run_dc_file(path, *, csv_path=None, overwrite_csv=False):
     """Load a native document and return complete SI-unit DC results as JSON."""
     from circuit_calculator.circuit import VoltageSource
     from circuit_calculator.circuit_io import load_document
@@ -202,6 +202,9 @@ def _run_dc_file(path):
     if unknowns > MAX_DC_UNKNOWNS:
         raise ValueError(f'DC command supports at most {MAX_DC_UNKNOWNS} unknowns; this circuit has {unknowns}')
     result = solve_dc(circuit)
+    if csv_path is not None:
+        from circuit_calculator.results_io import save_results_csv
+        save_results_csv(result, csv_path, overwrite=overwrite_csv, protected_path=path)
     output = {
         'title': document.title,
         'reference_node': result.reference_node,
@@ -229,10 +232,14 @@ def main(argv=None):
     commands = parser.add_subparsers(dest='command')
     dc_parser = commands.add_parser('dc', help='solve a native version-1 JSON circuit')
     dc_parser.add_argument('path', help='UTF-8 circuit JSON file')
+    dc_parser.add_argument('--csv', metavar='PATH', help='also save full-precision SI results as CSV')
+    dc_parser.add_argument('--overwrite-csv', action='store_true', help='explicitly replace an existing CSV output')
     gui_parser = commands.add_parser('gui', help='open the Tk DC network editor')
     gui_parser.add_argument('--example', action='store_true', help='start with a divider example')
     gui_parser.add_argument('path', nargs='?', help='schematic project (.ccproj.json) to open')
     args = parser.parse_args(argv)
+    if args.command == 'dc' and args.overwrite_csv and args.csv is None:
+        parser.error('--overwrite-csv requires --csv PATH')
     if args.command == 'gui' and args.path is not None and args.example:
         parser.error('choose a project path or --example, not both')
     if args.command is None:
@@ -251,7 +258,7 @@ def main(argv=None):
             except ImportError as error:
                 raise ImportError('The GUI requires Tkinter/Tk from your Python distributor') from error
         else:
-            _run_dc_file(args.path)
+            _run_dc_file(args.path, csv_path=args.csv, overwrite_csv=args.overwrite_csv)
     except (ValueError, TypeError, OSError, ImportError) as error:
         print(f'Error: {error}', file=sys.stderr)
         return 1

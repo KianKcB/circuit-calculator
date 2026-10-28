@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-10-28: RESULTS-1 full-precision SI CSV
+
+Keep numerical solving separate from results_io.py. Export the accepted DCResult
+with base SI units, repr(float) precision and explicit reference/diagnostic rows.
+Use one versioned long-form schema rather than several CSV sections. Qualify names
+with node:/element: to preserve exact names (including delimiters/control characters)
+as literal identifiers. Do not export GUI aliases as separate electrical nets.
+
+Reuse atomic no-clobber/replacement and protect input/project paths, including
+resolved and hard-link aliases. Keep default JSON stdout unchanged; optional CLI
+CSV writes before JSON and fails explicitly. GUI export is available only for the
+current accepted result and cannot change document/history/results. Keep replacement
+confirmation distinct from project saving. Package 0.9.0; no project/model/solver
+format changes. See RESULTS_CSV.md. No spreadsheet formula is generated/evaluated.
+
 ## 2026-10-28: GUI-6 renderer and measured viewport
 
 Extract actual Canvas drawing into canvas_renderer.py, keeping controller I/O,
