@@ -114,6 +114,17 @@ accommodate an implementation error.
 
 ## Latest local run: 2026-10-29
 
+GUI-9 passed **281 headless tests** on Python 3.11.9/3.14.6, **255 plus 26
+expected skips** in core-only mode, and **80 source Tk workflows** on both.
+Fresh offline wheel installations on both passed the same **255 core / 281
+DC-enabled / 80 installed Tk** checks, with module-origin, CLI/CSV, dependency
+and editable verification. Six model/import tests and six Tk workflows were
+added for metadata identity/limits/round trips/history, real modal form recovery,
+Enter/Ctrl+Enter/focus/Cancel, unchanged results and stale-worker rejection.
+Native visual/keyboard review confirmed labels/results/copy preview/cancel and
+the form layout; bulk computer-use text injection into Tk had no effect, so that
+helper path is not counted as a passed editing test. Details are in PROJECT_STATUS.md.
+
 UNITS-1 passed **275 headless tests** on both interpreters and **250 core tests
 with 25 expected skips** without NumPy. Eleven quantity tests and four GUI
 workflows cover exact input, all engineering prefixes, decimal contexts, unit/

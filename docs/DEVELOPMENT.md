@@ -14,7 +14,7 @@ The installable package requires Python >=3.11. Maintained CI targets CPython
 3.11-3.14 on Windows and Linux; other versions/platforms are not in the matrix.
 This replaces the previously unverified README Python 3.7 support claim. The
 installed flat imports and root launcher remain supported. The current
-local package version is 0.12.0; no release or registry publication has occurred.
+local package version is 0.13.0; no release or registry publication has occurred.
 The project's license is still undecided; no license grant is invented by packaging.
 
 For source development on Windows:
@@ -144,5 +144,7 @@ canvas_renderer.py owns Canvas graphics; viewport.py contains pure camera math.
 results_io.py formats/writes CSV from existing DCResult snapshots without solving.
 quantities.py parses exact Decimal GUI input and formats rounded SI display;
 neither model storage nor JSON/CSV export uses the display formatter.
+editor_dialogs.py owns the project-details form and imports Tk only on demand.
+Its error StringVar is released when the modal closes on the owning UI thread.
 Controller callbacks remain in gui.py. Viewport tests that assert actual visible
 fit map their test window first; a withdrawn 1-pixel drawing area cannot be fitted.

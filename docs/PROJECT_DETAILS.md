@@ -3,7 +3,8 @@
 Design contract, 2026-10-29. Expose the title and description already present in
 CircuitDocument; do not add another metadata store or change either file schema.
 The circuit, layout and camera remain independent of these descriptive fields.
-Status: PLANNED; the dialog is not implemented in UNITS-1.
+Implementation: GUI-9, local package 0.13.0; verification is recorded in
+PROJECT_STATUS.md and TESTING.md. Native v1/project v3/CSV v1 remain unchanged.
 
 **Project details** opens one modal form with a single-line title and multiline
 description. Initialize from the current document exactly. Both fields may be
@@ -16,6 +17,10 @@ Enter in the description inserts a newline; Ctrl+Enter applies. Enter in the tit
 or on a button keeps normal dialog behavior. Buttons and form fields must be
 keyboard reachable. Focus/selection begins in the title. Keep Tk imports lazy so
 ordinary installed/core tests and programmatic metadata editing need no display.
+Use Tab from the title and Ctrl+Tab to leave the multiline description. Enter on
+Cancel cancels; it never applies the form. The dialog's temporary error StringVar
+is released on the UI thread when it closes, before later worker allocations can
+trigger cyclic collection of closed widget wrappers.
 
 `Schematic.set_metadata(title, description)` returns a validated immutable
 document replacement while preserving the exact circuit object and graphical
@@ -33,6 +38,6 @@ or sent externally. Native JSON remains authoritative for the metadata limits.
 
 Acceptance: Unicode/empty/boundary and invalid text, exact graph/layout/identity
 preservation, atomic no-op/failure/undo behavior, native/project round trips,
-known-answer electrical equivalence, real dialog Save/Cancel/validation/newline/
+known-answer electrical equivalence, real dialog Apply/Cancel/validation/newline/
 keyboard workflow, dirty/save/open and stale-worker protection, plus fresh core/DC
 and installed Tk checks. General component property forms remain a separate task.

@@ -457,6 +457,9 @@ class Schematic:
     def set_reference(self, name):
         return replace(self, document=self._circuit(reference_node=name))
 
+    def set_metadata(self, title, description):
+        return replace(self, document=replace(self.document, title=title, description=description))
+
     def change_value(self, name, value):
         if name not in {e.name for e in self.document.circuit.elements}:
             raise ValueError('Select a component to edit')

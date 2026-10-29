@@ -24,6 +24,7 @@ if '--installed' in sys.argv:
         raise RuntimeError('Installed GUI checks require Python -I isolation')
     for module in ('circuit_calculator', 'circuit_calculator.gui', 'circuit_calculator.canvas_renderer',
                    'circuit_calculator.viewport', 'circuit_calculator.results_io', 'circuit_calculator.quantities',
+                   'circuit_calculator.editor_dialogs',
                    'circuit_calculator.schematic', 'circuit_calculator.dc', 'circuit_calculator.project_io'):
         spec = importlib.util.find_spec(module)
         if spec is None or spec.origin is None or not Path(spec.origin).resolve().is_relative_to(Path(sys.prefix).resolve()):
@@ -43,6 +44,158 @@ from circuit_calculator.project_io import load_project, save_project, SchematicP
 
 
 class TkWorkflowTests(unittest.TestCase):
+    def drive_details(self, action):
+        """Exercise the real modal form with a bounded cleanup on assertion failure."""
+        self.root.deiconify()
+        self.root.update()
+        failures = []
+        def dialog():
+            candidates = [w for w in self.root.winfo_children() if isinstance(w, tk.Toplevel)
+                          and w.title() == 'Project details']
+            self.assertEqual(len(candidates), 1)
+            return candidates[0]
+        def respond():
+            try:
+                action(dialog())
+            except BaseException as error:
+                failures.append(error)
+                for child in self.root.winfo_children():
+                    if isinstance(child, tk.Toplevel):
+                        child.cancel()
+        def timeout():
+            failures.append(AssertionError('Project-details dialog did not finish in five seconds'))
+            for child in self.root.winfo_children():
+                if isinstance(child, tk.Toplevel):
+                    child.cancel()
+        timer = self.root.after(5000, timeout)
+        self.root.after(80, respond)
+        try:
+            self.app.buttons['Project details'].invoke()
+        finally:
+            self.root.after_cancel(timer)
+        if failures:
+            raise failures[0]
+
+    def test_real_project_details_apply_and_single_undo(self):
+        before = self.app.session.state
+        def enter(dialog):
+            self.assertEqual(dialog.title_entry.get(), before.document.title)
+            dialog.title_entry.delete(0, 'end')
+            dialog.title_entry.insert(0, 'تقسیم ولتاژ')
+            dialog.description.insert('end', 'Line 1\nخط دوم\n')
+            dialog.apply_button.invoke()
+        self.drive_details(enter)
+        edited = self.app.session.state
+        self.assertEqual(edited.document.title, 'تقسیم ولتاژ')
+        self.assertEqual(edited.document.description, 'Line 1\nخط دوم\n')
+        self.assertTrue(self.app.dirty)
+        self.app.undo()
+        self.assertEqual(self.app.session.state, before)
+        self.app.redo()
+        self.assertEqual(self.app.session.state, edited)
+        self.app.simulate()
+        self.wait_for_result()
+        self.assertAlmostEqual(self.app.session.result.node_voltages['out'], 8)
+
+    def test_real_project_details_cancel_and_noop_preserve_result(self):
+        self.root.deiconify()
+        self.root.update()
+        self.app.simulate()
+        self.wait_for_result()
+        before, result, revision = self.app._snapshot(), self.app.session.result, self.app.session.revision
+        def cancel(dialog):
+            dialog.title_entry.insert('end', 'discard this')
+            dialog.cancel_button.invoke()
+        self.drive_details(cancel)
+        self.drive_details(lambda dialog: dialog.apply_button.invoke())
+        self.assertEqual(self.app._snapshot(), before)
+        self.assertEqual(self.app.session.revision, revision)
+        self.assertIs(self.app.session.result, result)
+
+    def test_real_project_details_invalid_fields_stay_open_and_can_be_corrected(self):
+        revision = self.app.session.revision
+        def validate(dialog):
+            dialog.title_entry.delete(0, 'end')
+            dialog.title_entry.insert(0, 'x' * 257)
+            dialog.description.insert('end', 'keep this')
+            dialog.apply_button.invoke()
+            self.assertTrue(dialog.winfo_exists())
+            self.assertIn('256', dialog.error.get())
+            self.assertEqual(dialog.description.get('1.0', 'end-1c'), 'keep this')
+            self.assertEqual(self.app.session.revision, revision)
+            dialog.title_entry.delete(0, 'end')
+            dialog.title_entry.insert(0, 'correct')
+            dialog.description.delete('1.0', 'end')
+            dialog.description.insert('1.0', 'x' * 4097)
+            dialog.apply_button.invoke()
+            self.assertIn('4096', dialog.error.get())
+            self.assertEqual(dialog.title_entry.get(), 'correct')
+            dialog.description.delete('1.0', 'end')
+            dialog.apply_button.invoke()
+        self.drive_details(validate)
+        self.assertEqual(self.app.session.state.document.title, 'correct')
+        self.assertEqual(self.app.session.state.document.description, '')
+        self.assertEqual(self.app.session.revision, revision + 1)
+
+    def test_real_project_details_description_enter_and_control_enter(self):
+        def keyboard(dialog):
+            dialog.description.focus_force()
+            self.root.update()
+            dialog.description.insert('1.0', 'first')
+            dialog.description.mark_set('insert', 'end-1c')
+            dialog.description.event_generate('<Return>', when='tail')
+            self.root.update()
+            self.assertTrue(dialog.winfo_exists())
+            self.assertEqual(dialog.description.get('1.0', 'end-1c'), 'first\n')
+            dialog.description.insert('insert', 'second')
+            dialog.description.event_generate('<Control-Return>', when='tail')
+            self.root.update()
+        self.drive_details(keyboard)
+        self.assertEqual(self.app.session.state.document.description, 'first\nsecond')
+
+    def test_real_project_details_keyboard_focus_and_enter_on_cancel(self):
+        before, revision = self.app.session.state, self.app.session.revision
+        def keyboard(dialog):
+            dialog.title_entry.focus_force()
+            self.root.update()
+            dialog.title_entry.event_generate('<Tab>', when='tail')
+            self.root.update()
+            self.assertIs(dialog.focus_get(), dialog.description)
+            dialog.description.event_generate('<Control-Tab>', when='tail')
+            self.root.update()
+            self.assertIs(dialog.focus_get(), dialog.apply_button)
+            dialog.cancel_button.focus_force()
+            self.root.update()
+            dialog.cancel_button.event_generate('<Return>', when='tail')
+            self.root.update()
+        self.drive_details(keyboard)
+        self.assertEqual(self.app.session.state, before)
+        self.assertEqual(self.app.session.revision, revision)
+
+    def test_project_details_save_reopen_export_and_stale_worker(self):
+        result, future = solve_dc(self.app.session.state.compile().circuit), Future()
+        with patch.object(self.app.worker, 'submit', return_value=future):
+            self.app.simulate()
+        with patch('circuit_calculator.editor_dialogs.ask_project_details', return_value=('new title', 'new\nnotes')):
+            self.app.edit_details()
+        future.set_result(result)
+        self.wait_for_result()
+        self.assertIsNone(self.app.session.result)
+        path = self.project_path()
+        with patch('tkinter.filedialog.asksaveasfilename', return_value=str(path)):
+            self.app.save_project()
+        self.assertEqual(load_project(path).schematic.document.title, 'new title')
+        self.app._apply(self.app.session.state.set_metadata('temporary', ''))
+        with patch('tkinter.filedialog.askopenfilename', return_value=str(path)), \
+             patch('tkinter.messagebox.askyesnocancel', return_value=False):
+            self.app.open_project()
+        self.assertEqual(self.app.session.state.document.description, 'new\nnotes')
+        self.assertFalse(self.app.dirty)
+        exported = path.with_name('circuit.json')
+        with patch('tkinter.filedialog.asksaveasfilename', return_value=str(exported)):
+            self.app.export()
+        self.assertEqual(load_document(exported).title, 'new title')
+
     def test_prefixed_value_edit_solves_known_divider_and_exports_base_units(self):
         self.app.selected = ('element', 'R1')
         with patch('tkinter.simpledialog.askstring', return_value='2kΩ'):

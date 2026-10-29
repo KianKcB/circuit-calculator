@@ -46,7 +46,7 @@ progress and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for development commands
   Windows and Linux. Newer versions are outside the current test matrix.
 - The formula CLI and circuit model need only the standard library. DC solving
   adds the optional NumPy dependency.
-- Version 0.12.0 is currently a local development package. Installation commands
+- Version 0.13.0 is currently a local development package. Installation commands
   below use this checkout; it has not been published to a package registry.
 
 Open a terminal in the project directory and check that Python is available:
@@ -380,6 +380,11 @@ matters: `m` is milli and `M` is mega. Canvas/results use readable prefixes;
 files and CSV retain base SI values. Dialogs initialize with the full stored
 number, not a rounded label. The formula menu keeps its existing numeric syntax.
 See [QUANTITIES.md](docs/QUANTITIES.md) for accepted units, precision and limits.
+**Project details** edits the title and multiline description together. Apply
+updates the document; **Save Project** writes it to disk. Invalid entries stay
+open for correction, while Cancel/Escape keeps the original details. Enter adds
+a description line, Ctrl+Enter applies, and Ctrl+Tab leaves the multiline field.
+See [PROJECT_DETAILS.md](docs/PROJECT_DETAILS.md) for metadata/history rules.
 See [WIRE_ROUTING.md](docs/WIRE_ROUTING.md) for routing, splitting and crossing rules.
 See [BEND_EDITING.md](docs/BEND_EDITING.md) for bend handles and right-angle routing.
 See [VIEWPORT.md](docs/VIEWPORT.md) for camera behavior. Scroll bounds now follow

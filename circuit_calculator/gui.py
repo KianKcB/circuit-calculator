@@ -81,7 +81,8 @@ class CircuitEditor:
         self.horizontal_first = True
         ttk.Checkbutton(wire_actions, text='Right-angle wires', variable=self.orthogonal,
                         command=self.routing_style_changed).pack(side='left', padx=8)
-        for label, command in (('Fit circuit', self.fit_circuit), ('100%', lambda: self.set_zoom(1))):
+        for label, command in (('Fit circuit', self.fit_circuit), ('100%', lambda: self.set_zoom(1)),
+                               ('Project details', self.edit_details)):
             button = ttk.Button(header, text=label, command=command)
             button.pack(side='right', padx=3)
             self.buttons[label] = button
@@ -731,6 +732,17 @@ class CircuitEditor:
             self.selected = ('element', copied.document.circuit.elements[-1].name)
             self._apply(copied)
             self.status.set('Created an unconnected duplicate. Move it and wire its terminals before analysis.')
+        except (TypeError, ValueError) as error:
+            self._error(error)
+
+    def edit_details(self):
+        from .editor_dialogs import ask_project_details
+        details = ask_project_details(self.root, self.session.state.document)
+        if details is None:
+            return
+        try:
+            self._apply(self.session.state.set_metadata(*details))
+            self.status.set('Project details applied. Save Project to keep these changes.')
         except (TypeError, ValueError) as error:
             self._error(error)
 

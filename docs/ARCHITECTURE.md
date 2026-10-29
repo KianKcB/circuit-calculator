@@ -45,6 +45,12 @@ duplicate composes copy/paste without inheriting wiring or the reference. Pendin
 placement and preview rotation stay in the GUI controller outside history/files.
 The renderer draws preview decoration without electrical hit/content tags.
 See COMPONENT_COPY.md for clipboard and cancellation semantics.
+Schematic.set_metadata replaces only the validated CircuitDocument title and
+description, preserving the circuit and graphical tuples. editor_dialogs.py owns
+the lazy Tk form and validates through CircuitDocument. On return the controller
+applies the fields to the current state, not a saved pre-dialog graph. Metadata
+edits use normal one-step history and conservative result invalidation; unchanged
+or canceled details preserve results. See PROJECT_DETAILS.md.
 Wire owns an immutable tuple of Waypoint bends. Path points use node positions
 at the ends and fixed world-coordinate bends inside; only Wire.first/second
 participate in net resolution. Splitting explicitly creates/reuses a junction

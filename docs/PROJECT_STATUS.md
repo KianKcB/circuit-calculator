@@ -1,9 +1,9 @@
 # Project status and continuation
 
-Date: 2026-10-29. UNITS-1 began at `4197342` with a clean working tree and
+Date: 2026-10-29. GUI-9 began at `8ca5165` with a clean working tree and
 no unrelated changes. The user has authorized staging
 and committing completed local batches; pushing remains a separate action.
-Package version is now 0.12.0;
+Package version is now 0.13.0;
 electrical document v1 and schematic-project v3 are separate formats. Project-v1/v2
 loading remains supported.
 Use README and DEVELOPMENT.md for current package paths/commands; historical
@@ -729,6 +729,8 @@ still unverified; no push/dispatch/publication performed.
 
 ## Batch GUI-7: collision-safe names and explicit value units
 
+Committed as `4048f91`.
+
 `Schematic.rename` atomically updates component/placement names, free-node
 endpoints/reference/positions, or wire names. Three separate namespaces preserve
 case and spaces; UTF-8/nonblank/256-character bounds match project persistence.
@@ -760,6 +762,8 @@ offline; no dependency pins were changed. Hosted Linux execution remains pending
 
 ## Batch GUI-8: component clipboard and duplication
 
+Committed as `4197342`.
+
 ComponentTemplate snapshots only validated R/V/I kind/value/right-angle rotation.
 Copy preserves source graph/results; Paste/duplicate allocate collision-free
 component names and dedicated terminals without copying wires/reference. Legacy
@@ -788,6 +792,8 @@ wheels offline. One interrupted 3.14 checker was rerun from a new environment to
 completion. No solver/model/formula changes, dependency changes or pushes.
 
 ## Batch UNITS-1: exact engineering input and readable SI display
+
+Committed as `8ca5165`.
 
 quantities.py adds bounded decimal/scientific GUI input with optional matching
 Ω/ohm/V/A/W units and case-sensitive engineering prefixes q through Q. Micro
@@ -827,8 +833,46 @@ difference below 5e-6 at six significant digits (observed maximum 4.916e-6).
 This is display QA, not a simulation-accuracy claim. Syntax/local-document-link
 and whitespace checks pass. Hosted Linux execution remains unverified.
 
+## Batch GUI-9: project title and multiline description
+
+Schematic.set_metadata shares CircuitDocument's UTF-8 and 256/4096-character
+limits, preserving the exact circuit and graphical tuple objects. The new lazy
+editor_dialogs.py form applies both fields together, retains invalid text with
+inline errors, and supports multiline Enter, Ctrl+Enter Apply, Ctrl+Tab navigation
+and Escape/Cancel. Enter on Cancel never applies. Temporary error-variable cleanup
+occurs on the owning Tk thread. The controller applies metadata to the current
+graph after the modal returns. Normal history/dirty/result rules apply; no-op and
+cancel preserve numerical results. Save/reopen and native export retain details.
+
+Six model/import tests cover exact identity, empty/boundary/Unicode fields,
+malformed text, file round trips, one-step history, stale results, Tk-free imports
+and unchanged 8 V / -0.048 W solved quantities. Six real Tk workflows cover the
+form, rollback/correction, multiline keyboard/focus behavior, no-op/result
+preservation, save/reopen/export and delayed-worker rejection. Source headless
+runs passed **281 tests** on Python 3.11.9/3.14.6; core-only passed **255 with
+26 expected NumPy skips**. Both source interpreters passed **80 Tk workflows**.
+Fresh isolated installs on both passed **255 core tests plus 26 expected skips**,
+**281 DC-enabled tests**, **80 installed Tk workflows**, and module-origin,
+entry-point/CSV/dependency/editable checks, using cached pinned wheels offline.
+
+Native visual review of an ignored copy of routed-divider verified readable
+toolbars, complete Fit Circuit, kΩ labels, 8 V / 4 mA / -48 mW results and the
+metadata form layout. Native Ctrl+C/Ctrl+V and pointer motion showed the isolated
+copy preview; Escape removed it while preserving results. A native digit key
+changed the metadata title field and Escape canceled it. Computer-use bulk text
+injection had no effect in Tk entries even after refocusing; do not claim that
+helper path passed. Complete field editing/validation/newlines/persistence are
+covered by the real Tk harness above. The fitted review copy was saved at
+`.build-check/2026-10-29-v013-review.ccproj.json`; no source example was changed.
+
+GUI-9 is VERIFIED locally and ready for its commit. Package 0.13.0, unchanged
+native v1/project v3/CSV v1 and dependency boundaries. The engine/model/formula
+files and source examples are unchanged from session base `841d800`. Hosted Linux
+CI remains configured/unverified; no push, CI dispatch or publication occurred.
+
 ## Exact next action
 
-UNITS-1 is verified locally and ready for its commit. Next add project metadata editing in a
-separate scoped batch. Keep full phase 6 in progress.
+Review the four completed local batches at the clean commit checkpoint. Next address
+remaining R/F and global Ctrl shortcut keyboard-layout dependence, then scope
+explicit component-result inspection. Keep full phase 6 in progress.
 Obtain hosted CI evidence after a user push; pushing is not authorized here.
