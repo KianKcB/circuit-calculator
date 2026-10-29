@@ -24,7 +24,7 @@ if '--installed' in sys.argv:
         raise RuntimeError('Installed GUI checks require Python -I isolation')
     for module in ('circuit_calculator', 'circuit_calculator.gui', 'circuit_calculator.canvas_renderer',
                    'circuit_calculator.viewport', 'circuit_calculator.results_io', 'circuit_calculator.quantities',
-                   'circuit_calculator.editor_dialogs', 'circuit_calculator.shortcuts',
+                   'circuit_calculator.editor_dialogs', 'circuit_calculator.shortcuts', 'circuit_calculator.inspection',
                    'circuit_calculator.schematic', 'circuit_calculator.dc', 'circuit_calculator.project_io'):
         spec = importlib.util.find_spec(module)
         if spec is None or spec.origin is None or not Path(spec.origin).resolve().is_relative_to(Path(sys.prefix).resolve()):
@@ -44,7 +44,127 @@ from circuit_calculator.project_io import load_project, save_project, SchematicP
 
 
 class TkWorkflowTests(unittest.TestCase):
+    def select_component(self, name):
+        position = self.app.session.state.component_placement(name)
+        point = self.point(position.x, position.y)
+        self.app.click(point)
+        self.app.release(point)
+        self.assertEqual(self.app.selected, ('element', name))
+
+    def inspection_text(self):
+        return self.app.inspection.get('1.0', 'end')
+
+    def test_inspector_selection_then_solve_shows_oriented_component_results(self):
+        before, revision = self.app._snapshot(), self.app.session.revision
+        self.select_component('R1')
+        self.assertEqual(self.app.result_tabs.select(), str(self.app.inspection_tab))
+        self.assertIn('Resistance: 1 kΩ', self.inspection_text())
+        self.assertIn('V(in) - V(out)', self.inspection_text())
+        self.assertIn('No current DC result', self.inspection_text())
+        self.assertEqual(self.app._snapshot(), before)
+        self.assertEqual(self.app.session.revision, revision)
+        self.app.simulate()
+        self.wait_for_result()
+        self.assertIn('Current: 4 mA', self.inspection_text())
+        self.assertIn('Power: 16 mW (absorbed)', self.inspection_text())
+        self.select_component('V1')
+        self.assertIn('Current: -4 mA', self.inspection_text())
+        self.assertIn('Power: -48 mW (delivered)', self.inspection_text())
+
+    def test_inspector_edit_history_new_and_open_never_reuse_old_numbers(self):
+        self.select_component('R1')
+        self.app.simulate()
+        self.wait_for_result()
+        self.app._apply(self.app.session.state.change_value('R1', 2000))
+        self.assertIn('Resistance: 2 kΩ', self.inspection_text())
+        self.assertIn('No current DC result', self.inspection_text())
+        self.assertNotIn('Power:', self.inspection_text())
+        self.app.undo()
+        self.assertIn('Select a component', self.inspection_text())
+        self.select_component('R1')
+        self.assertIn('No current DC result', self.inspection_text())
+        path = self.project_path()
+        with patch('tkinter.filedialog.asksaveasfilename', return_value=str(path)):
+            self.app.save_project()
+        self.app.simulate()
+        self.wait_for_result()
+        with patch('tkinter.filedialog.askopenfilename', return_value=str(path)):
+            self.app.open_project()
+        self.assertIn('Select a component', self.inspection_text())
+        self.assertIsNone(self.app.session.result)
+        self.app.new()
+        self.assertIn('Select a component', self.inspection_text())
+
+    def test_inspector_pending_and_stale_worker_do_not_show_previous_result(self):
+        self.select_component('R1')
+        self.app.simulate()
+        self.wait_for_result()
+        result, future = self.app.session.result, Future()
+        with patch.object(self.app.worker, 'submit', return_value=future):
+            self.app.simulate()
+        self.assertIn('Solving DC', self.inspection_text())
+        self.assertNotIn('Power:', self.inspection_text())
+        self.app._apply(self.app.session.state.change_value('R1', 2000))
+        self.assertIn('No current DC result', self.inspection_text())
+        future.set_result(result)
+        self.wait_for_result()
+        self.assertNotIn('Power:', self.inspection_text())
+        self.assertIsNone(self.app.session.result)
+
+    def test_inspector_terminal_alias_and_wire_current_policy(self):
+        self.app._apply(self.app.session.state.place_component('R1', 330, 160, 0))
+        terminal = self.app.session.state.document.circuit.elements[1].node_a
+        self.app.click(self.node(terminal))
+        self.assertIn('Terminal: R1.a', self.inspection_text())
+        self.app.simulate()
+        self.wait_for_result()
+        self.assertIn('Resolved net: in', self.inspection_text())
+        self.assertIn('Net voltage: 12 V', self.inspection_text())
+        self.app.click(self.point(330, 420))
+        self.assertEqual(self.app.selected, ('wire', 'W1'))
+        self.assertIn('Net voltage: 0 V', self.inspection_text())
+        self.assertIn('Wire current: not resolved', self.inspection_text())
+
+    def test_inspector_camera_tabs_and_copy_preview_preserve_current_text(self):
+        self.select_component('R1')
+        self.app.simulate()
+        self.wait_for_result()
+        result, revision, text = self.app.session.result, self.app.session.revision, self.inspection_text()
+        self.app.inspection.tag_add('sel', '1.0', '1.8')
+        self.app.change_zoom(.8)
+        self.assertEqual(self.inspection_text(), text)
+        self.assertEqual(self.app.inspection.get('sel.first', 'sel.last'), 'Resistor')
+        self.app.copy_selected()
+        self.app.paste()
+        self.app.route_motion(self.point(700, 400))
+        self.assertEqual(self.inspection_text(), text)
+        self.app.cancel()
+        self.app.result_tabs.select(self.app.all_results_tab)
+        self.app.result_tabs.select(self.app.inspection_tab)
+        self.assertIs(self.app.session.result, result)
+        self.assertEqual(self.app.session.revision, revision)
+        self.send_shortcut(self.app.inspection, 'z', 90)
+        self.assertEqual(self.app.session.revision, revision)  # no history entry
+
+    def test_result_views_scroll_and_tab_selection_is_not_project_data(self):
+        self.root.deiconify()
+        self.root.geometry('900x600')
+        self.root.update()
+        self.app.simulate()
+        self.wait_for_result()
+        before = self.app._snapshot()
+        self.app.results.yview_moveto(1)
+        self.root.update()
+        self.assertGreaterEqual(self.app.results.yview()[1], .999)
+        self.assertGreater(self.app.results.yview()[0], 0)
+        self.app.result_tabs.select(self.app.inspection_tab)
+        self.assertEqual(self.app._snapshot(), before)
+
     def send_shortcut(self, widget, key, windows_code, state=4):
+        if widget is self.app.results:
+            self.app.result_tabs.select(self.app.all_results_tab)
+        elif widget is self.app.inspection:
+            self.app.result_tabs.select(self.app.inspection_tab)
         self.root.deiconify()
         self.root.update()
         widget.focus_force()

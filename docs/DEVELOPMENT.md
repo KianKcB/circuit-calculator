@@ -14,7 +14,7 @@ The installable package requires Python >=3.11. Maintained CI targets CPython
 3.11-3.14 on Windows and Linux; other versions/platforms are not in the matrix.
 This replaces the previously unverified README Python 3.7 support claim. The
 installed flat imports and root launcher remain supported. The current
-local package version is 0.14.0; no release or registry publication has occurred.
+local package version is 0.15.0; no release or registry publication has occurred.
 The project's license is still undecided; no license grant is invented by packaging.
 
 For source development on Windows:
@@ -149,5 +149,8 @@ Its error StringVar is released when the modal closes on the owning UI thread.
 shortcuts.py resolves whitelisted command names from platform keycodes/symbols
 and modifier/scope rules. The controller dispatches them once without overriding
 unhandled Text bindings or modal forms. See SHORTCUTS.md.
+inspection.py formats selection topology and accepted current DCResult values.
+The controller refreshes it on selection/state/result changes and avoids rewriting
+unchanged text. Inspection never solves, modifies model data or persists results.
 Controller callbacks remain in gui.py. Viewport tests that assert actual visible
 fit map their test window first; a withdrawn 1-pixel drawing area cannot be fitted.

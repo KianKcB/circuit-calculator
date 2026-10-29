@@ -46,7 +46,7 @@ progress and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for development commands
   Windows and Linux. Newer versions are outside the current test matrix.
 - The formula CLI and circuit model need only the standard library. DC solving
   adds the optional NumPy dependency.
-- Version 0.14.0 is currently a local development package. Installation commands
+- Version 0.15.0 is currently a local development package. Installation commands
   below use this checkout; it has not been published to a package registry.
 
 Open a terminal in the project directory and check that Python is available:
@@ -390,6 +390,12 @@ Windows virtual letter keys under the observed non-Latin keyboard layout.
 Ctrl+Shift+Z also redoes an edit. Document shortcuts work in the read-only results
 panel; modal forms retain their own text controls. Alt/AltGr is ignored.
 See [SHORTCUTS.md](docs/SHORTCUTS.md) for scope and platform limits.
+Click a component, junction, terminal or wire to open **Selected item** beside
+**All results**. The inspector shows connections and sign conventions, plus
+voltage/current/power from the current solve. Wires show net voltage; individual
+wire current is not calculated. Edits clear old values, while selection/camera
+changes preserve results. Both views scroll and support text selection/copy.
+See [RESULT_INSPECTION.md](docs/RESULT_INSPECTION.md) for the result-validity rules.
 See [WIRE_ROUTING.md](docs/WIRE_ROUTING.md) for routing, splitting and crossing rules.
 See [BEND_EDITING.md](docs/BEND_EDITING.md) for bend handles and right-angle routing.
 See [VIEWPORT.md](docs/VIEWPORT.md) for camera behavior. Scroll bounds now follow

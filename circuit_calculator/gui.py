@@ -15,6 +15,7 @@ from .canvas_renderer import render_schematic, render_component_preview
 from .viewport import clamp_zoom, fit_zoom, scroll_region, scroll_fraction
 from .quantities import parse_quantity, format_quantity
 from .shortcuts import shortcut_action
+from .inspection import selection_text
 
 
 class CircuitEditor:
@@ -37,6 +38,7 @@ class CircuitEditor:
         self.clipboard = None
         self.paste_position = None
         self.paste_template = None
+        self._inspection_text = None
         self.zoom = 1.0
         self._canvas_size = None
         self._initial_view = project.view if project is not None else None
@@ -115,9 +117,22 @@ class CircuitEditor:
         panel = ttk.Frame(body, padding=(12, 4))
         body.add(panel, weight=1)
         ttk.Label(panel, text='DC results', font=('Segoe UI', 12, 'bold')).pack(anchor='w')
-        self.results = tk.Text(panel, width=34, wrap='word', relief='flat', bg='white',
-                               padx=10, pady=10, state='disabled', font=('Consolas', 10))
-        self.results.pack(fill='both', expand=True, pady=8)
+        self.result_tabs = ttk.Notebook(panel)
+        self.result_tabs.pack(fill='both', expand=True, pady=8)
+        self.all_results_tab = ttk.Frame(self.result_tabs)
+        self.inspection_tab = ttk.Frame(self.result_tabs)
+        self.result_tabs.add(self.all_results_tab, text='All results')
+        self.result_tabs.add(self.inspection_tab, text='Selected item')
+        def result_text(parent):
+            view = tk.Text(parent, width=34, wrap='word', relief='flat', bg='white',
+                           padx=10, pady=10, state='disabled', font=('Consolas', 10))
+            scroll = ttk.Scrollbar(parent, orient='vertical', command=view.yview)
+            view.configure(yscrollcommand=scroll.set)
+            scroll.pack(side='right', fill='y')
+            view.pack(side='left', fill='both', expand=True)
+            return view
+        self.results = result_text(self.all_results_tab)
+        self.inspection = result_text(self.inspection_tab)
         ttk.Label(root, text='Wire terminal dots or junctions explicitly. Crossings and proximity do not connect. '
                   'Project saves include layout; circuit exports contain electrical connections only.',
                   padding=(14, 6), foreground='#526477', wraplength=1100).pack(fill='x')
@@ -138,6 +153,7 @@ class CircuitEditor:
         root.bind('<Escape>', lambda event: self.cancel())
         root.bind('<Control-KeyPress>', self._global_key)
         self.results.bind('<Control-KeyPress>', self._global_key)
+        self.inspection.bind('<Control-KeyPress>', self._global_key)
         root.bind('<F5>', lambda event: self.simulate())
         self.draw()
         self.root.update_idletasks()
@@ -178,6 +194,17 @@ class CircuitEditor:
         self.results.delete('1.0', 'end')
         self.results.insert('1.0', text)
         self.results.configure(state='disabled')
+        self._refresh_inspection()
+
+    def _refresh_inspection(self):
+        solving = self.future is not None and self.submitted_revision == self.session.revision
+        text = selection_text(self.session.state, self.selected, self.session.result, solving=solving)
+        if text != self._inspection_text:
+            self.inspection.configure(state='normal')
+            self.inspection.delete('1.0', 'end')
+            self.inspection.insert('1.0', text)
+            self.inspection.configure(state='disabled')
+            self._inspection_text = text
 
     def _export_availability(self):
         self.buttons['Export CSV'].configure(state='normal' if self.session.result is not None else 'disabled')
@@ -439,6 +466,8 @@ class CircuitEditor:
                     self.drag_origin = (event.x, event.y)
                     self.drag_offset = (self.canvas.canvasx(event.x) / self.zoom - placement.x,
                                         self.canvas.canvasy(event.y) / self.zoom - placement.y)
+                if self.selected is not None:
+                    self.result_tabs.select(self.inspection_tab)
                 self.draw()
             elif self.mode in ('resistor', 'voltage', 'current') and not hit:
                 self.pending = None
@@ -567,6 +596,7 @@ class CircuitEditor:
         self._preview_route()
         if self.mode == 'paste' and self.paste_template is not None and self.paste_position is not None:
             render_component_preview(self.canvas, self.paste_template, *self.paste_position, self.zoom)
+        self._refresh_inspection()
 
     def change_zoom(self, factor):
         try:
@@ -971,6 +1001,7 @@ class CircuitEditor:
             self._text('Solving DC circuit…')
             self.submitted_revision = self.session.revision
             self.future = self.worker.submit(solve_dc, circuit)
+            self._refresh_inspection()
             self.buttons['Simulate DC'].configure(state='disabled')
             self.root.after(40, self._poll)
         except (ValueError, TypeError) as error:
@@ -1002,6 +1033,8 @@ class CircuitEditor:
                       f'KCL residual: {format_quantity(result.max_kcl_residual_amperes, "A", significant=3)}',
                       f'Power balance: {format_quantity(result.power_balance_watts, "W", significant=3)}']
             self._text('\n'.join(lines))
+            if self.selected is None:
+                self.result_tabs.select(self.all_results_tab)
             self._export_availability()
             self.status.set('DC solved. Results follow each component’s displayed terminal order.')
         except (ValueError, TypeError, ImportError) as error:

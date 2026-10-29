@@ -114,6 +114,14 @@ accommodate an implementation error.
 
 ## Latest local run: 2026-10-29
 
+RESULTS-2 passed **295 headless tests / 91 source Tk workflows** on both local
+interpreters, with **268 core plus 27 expected skips** without NumPy. Fresh offline
+installs on both passed **268 core / 295 DC-enabled / 91 installed Tk** and all
+origin/entry-point/CSV/dependency/editable checks. Nine pure/import/reference tests
+and six GUI workflows cover component power/current signs, aliases/reference,
+unresolved wire current, stale-result clearing, selection/camera/paste preservation,
+read-only tabs and actual scrolling at the minimum window size.
+
 KEYS-1 source runs passed **286 headless tests** and **85 Tk workflows** on
 Python 3.11.9/3.14.6. Core-only passed 260 with 26 expected NumPy skips. Five
 pure resolver tests cover Windows/non-Windows mapping, Shift/Caps Lock/AltGr,

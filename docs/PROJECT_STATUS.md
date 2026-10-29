@@ -1,9 +1,9 @@
 # Project status and continuation
 
-Date: 2026-10-29. GUI-9 began at `8ca5165` with a clean working tree and
+Date: 2026-10-29. This session began at `101a157` with a clean working tree and
 no unrelated changes. The user has authorized staging
 and committing completed local batches; pushing remains a separate action.
-Package version is now 0.14.0;
+Package version is now 0.15.0;
 electrical document v1 and schematic-project v3 are separate formats. Project-v1/v2
 loading remains supported.
 Use README and DEVELOPMENT.md for current package paths/commands; historical
@@ -872,6 +872,8 @@ CI remains configured/unverified; no push, CI dispatch or publication occurred.
 
 ## Batch KEYS-1: keyboard-layout and scope consistency
 
+Committed as `4a632ad`.
+
 Base `101a157`, clean tree, no unrelated changes. shortcuts.py maps only allowed
 canvas/application commands, using Windows virtual letter codes or Latin symbols
 elsewhere. R/F and document Z/Y/S/O now share clipboard C/V/D dispatch rules;
@@ -889,8 +891,34 @@ wheel checks on both passed the same **260 core / 286 DC-enabled / 85 installed
 Tk** counts, plus origin/CLI/CSV/dependency/editable checks. Pinned NumPy remains
 2.4.6. KEYS-1 is VERIFIED locally; hosted Linux remains unverified. No push.
 
+## Batch RESULTS-2: selected component and net inspection
+
+inspection.py presents component values, human-readable terminal/polarity/current
+conventions and accepted DC voltages/currents/power with exact absorbed/delivered/
+zero classification. Junctions/terminals resolve net aliases/reference identity;
+wires show net voltage and explicitly no individual wire-current result. The
+helper is pure and does not solve or validate arbitrary external result/state
+correspondence. The controller supplies its current EditorSession result.
+
+The right panel now has Selected item / All results tabs and vertical scrollbars.
+Canvas selection opens the inspector. Edits/history/open/new/new solve clear old
+numbers; current-job status is explicit. Selection, camera and canceled previews
+preserve results. Unchanged inspector text is not rewritten, preserving text
+selection/scroll. Tabs/selection do not enter project data or history. Keyboard
+document commands work in both read-only views. See RESULT_INSPECTION.md.
+
+Nine headless tests and six focused Tk workflows pass, including analytical
+12 V divider signs, a real -3 mA current-source circuit (source -70 mW, resistor
+100 mW, current source -30 mW), alias/reference behavior, wire non-inference,
+range/sign formatting, export/state preservation, stale workers, tabs and scrolling.
+Both source interpreters passed **295 headless tests** and **91 Tk workflows**.
+Core-only passed **268 with 27 expected NumPy skips**. Fresh offline installations
+on both passed the same **268 core / 295 DC-enabled / 91 installed Tk** counts,
+plus import/CLI/CSV/dependency/editable checks under pinned NumPy 2.4.6. RESULTS-2
+is VERIFIED locally. No model/solver/math/schema/dependency changes or push.
+
 ## Exact next action
 
-Commit KEYS-1, then implement explicit component-result
-inspection with orientation/current-result tests. Keep full phase 6 in progress.
+Commit RESULTS-2, then implement item search/reveal for larger
+schematics with exact identity and camera/history tests. Keep phase 6 in progress.
 Obtain hosted CI evidence after a user push; pushing is not authorized here.

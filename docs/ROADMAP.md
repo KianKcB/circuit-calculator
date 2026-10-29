@@ -24,7 +24,7 @@ direction; research items require a separate feasibility decision.
 | 15 SPICE interoperability | NOT STARTED | Selected syntax and external benchmark suite; backend/version/license review first. Reject unsupported directives and document model differences. |
 | 16 Specialized analysis | DEFERRED | Small-signal, noise, pole-zero, distortion, multiport, thermal and transmission-line features each require a separate mathematical specification and references. |
 | 17 Research extensions | DEFERRED | Mixed-signal, RF/distributed, multiphysics, fitting, optimization, plugins and external APIs; feasibility and maintenance assessment before approval. |
-| 18 Distribution/maintenance | IN PROGRESS | Local package 0.14.0, project v3/backward loading and CSV results v1. Isolated installed Tk checks and Linux display CI configured; hosted evidence pending. Bounded grid timing/accuracy script available. Publishing, licensing, releases and broader benchmarks remain planned. |
+| 18 Distribution/maintenance | IN PROGRESS | Local package 0.15.0, project v3/backward loading and CSV results v1. Isolated installed Tk checks and Linux display CI configured; hosted evidence pending. Bounded grid timing/accuracy script available. Publishing, licensing, releases and broader benchmarks remain planned. |
 
 ## Next reviewable batches
 
@@ -33,7 +33,7 @@ direction; research items require a separate feasibility decision.
    from this session; exact changes and verification are in PROJECT_STATUS.md.
 3. GUI-7/8/9 and UNITS-1 add scoped names/values, component copies, engineering
    units and project details. Next scope is remaining keyboard-layout consistency
-   and an explicit component-result inspection workflow. Keep the
+   and selected component/net inspection. Keep the
    full phase-6 milestone in progress; obtain hosted CI evidence after a user push.
 
 PERSIST-1/GUI-1 are committed as c4a13dd and REORG-1 as 992fbac. GUI-2 project

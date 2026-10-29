@@ -55,6 +55,12 @@ shortcuts.py is a pure resolver of fixed command names for canvas/application
 scope, modifiers and platform key fields. GUI handlers stop propagation only for
 handled commands. Read-only results share document shortcuts; separate modal
 toplevels retain local text behavior. See SHORTCUTS.md.
+inspection.py formats selected components/nets from Schematic and an optional
+current accepted DCResult supplied by the controller. Selected item and All results
+are transient scrollable views. Inspection does not establish correspondence for
+arbitrary external state/result pairs, solve circuits or infer per-wire current.
+Cached identical text avoids clearing user selection on camera/preview redraws.
+See RESULT_INSPECTION.md for sign, alias and stale-result behavior.
 Wire owns an immutable tuple of Waypoint bends. Path points use node positions
 at the ends and fixed world-coordinate bends inside; only Wire.first/second
 participate in net resolution. Splitting explicitly creates/reuses a junction
