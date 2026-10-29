@@ -82,3 +82,112 @@ def ask_project_details(parent, document):
             super().destroy()
 
     return DetailsDialog(parent, 'Project details').result
+
+
+def ask_find_item(parent, state):
+    """Return an exact selection identity, never infer it from a display string."""
+    from .navigation import catalog_items, filter_items
+    items = catalog_items(state)
+    import tkinter as tk
+    from tkinter import simpledialog, ttk
+
+    class FindDialog(simpledialog.Dialog):
+        def body(self, master):
+            self.resizable(False, False)
+            self.query, self.status = tk.StringVar(), tk.StringVar()
+            self._rows = {f'item{i}': item for i, item in enumerate(items)}
+            ttk.Label(master, text='Name or terminal label (up to 256 characters)').pack(anchor='w')
+            self.entry = ttk.Entry(master, width=64, textvariable=self.query)
+            self.entry.pack(fill='x', pady=(3, 8))
+            frame = ttk.Frame(master, width=480, height=260)
+            frame.pack(fill='both', expand=True)
+            frame.pack_propagate(False)
+            self.tree = ttk.Treeview(frame, columns=('kind', 'name'), show='headings', height=11, selectmode='browse')
+            self.tree.heading('kind', text='Kind')
+            self.tree.heading('name', text='Name / terminal label')
+            self.tree.column('kind', width=100, stretch=False)
+            self.tree.column('name', width=360, stretch=False)
+            scroll = ttk.Scrollbar(frame, orient='vertical', command=self.tree.yview)
+            horizontal = ttk.Scrollbar(frame, orient='horizontal', command=self.tree.xview)
+            self.tree.configure(yscrollcommand=scroll.set, xscrollcommand=horizontal.set)
+            scroll.pack(side='right', fill='y')
+            horizontal.pack(side='bottom', fill='x')
+            self.tree.pack(side='left', fill='both', expand=True)
+            ttk.Label(master, textvariable=self.status, wraplength=470).pack(anchor='w', pady=6)
+            self.tree.bind('<Double-Button-1>', self._double_click)
+            self.tree.bind('<<TreeviewSelect>>', self._selection_changed)
+            self.entry.bind('<Down>', self._focus_list)
+            self._trace = self.query.trace_add('write', self._filter)
+            self._filter()
+            return self.entry
+
+        def buttonbox(self):
+            box = ttk.Frame(self)
+            self.show_button = ttk.Button(box, text='Show item', command=self.ok)
+            self.show_button.pack(side='left', padx=5, pady=5)
+            self.cancel_button = ttk.Button(box, text='Cancel', command=self.cancel)
+            self.cancel_button.pack(side='left', padx=5, pady=5)
+            box.pack()
+            self.bind('<Return>', self._return_key)
+            self.bind('<Escape>', self.cancel)
+            self._selection_changed()
+
+        def _filter(self, *args):
+            old = self.tree.selection()
+            self.tree.delete(*self.tree.get_children())
+            try:
+                matches = set(filter_items(items, self.query.get()))
+            except (ValueError, TypeError) as error:
+                self.status.set(str(error))
+                self._selection_changed()
+                return
+            kinds = {'element': 'Component', 'node': 'Junction', 'terminal': 'Terminal', 'wire': 'Wire'}
+            for row, item in self._rows.items():
+                if item in matches:
+                    self.tree.insert('', 'end', iid=row, values=(kinds[item.kind], item.label))
+            rows = self.tree.get_children()
+            if rows:
+                selected = old[0] if old and old[0] in rows else rows[0]
+                self.tree.selection_set(selected)
+                self.tree.focus(selected)
+                self.tree.see(selected)
+            self.status.set(f'{len(rows)} matching items. Show item selects and centers without changing zoom.' if rows else 'No matching items.')
+            self._selection_changed()
+
+        def _selection_changed(self, event=None):
+            if hasattr(self, 'show_button'):
+                self.show_button.configure(state='normal' if self.tree.selection() else 'disabled')
+
+        def _focus_list(self, event):
+            self.tree.focus_set()
+            return 'break'
+
+        def _double_click(self, event):
+            row = self.tree.identify_row(event.y)
+            if row:
+                self.tree.selection_set(row)
+                self.ok()
+            return 'break'
+
+        def _return_key(self, event):
+            self.cancel() if event.widget is self.cancel_button else self.ok()
+            return 'break'
+
+        def validate(self):
+            selected = self.tree.selection()
+            if not selected:
+                self.status.set('Choose a matching item, or change the search text.')
+                return False
+            self._selected = self._rows[selected[0]].selection
+            return True
+
+        def apply(self):
+            self.result = self._selected
+
+        def destroy(self):
+            if hasattr(self, '_trace'):
+                self.query.trace_remove('write', self._trace)
+            self.query = self.status = None
+            super().destroy()
+
+    return FindDialog(parent, 'Find item').result

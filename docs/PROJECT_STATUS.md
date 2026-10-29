@@ -3,7 +3,7 @@
 Date: 2026-10-29. This session began at `101a157` with a clean working tree and
 no unrelated changes. The user has authorized staging
 and committing completed local batches; pushing remains a separate action.
-Package version is now 0.15.0;
+Package version is now 0.16.0;
 electrical document v1 and schematic-project v3 are separate formats. Project-v1/v2
 loading remains supported.
 Use README and DEVELOPMENT.md for current package paths/commands; historical
@@ -893,6 +893,8 @@ Tk** counts, plus origin/CLI/CSV/dependency/editable checks. Pinned NumPy remain
 
 ## Batch RESULTS-2: selected component and net inspection
 
+Committed as `7a97197`.
+
 inspection.py presents component values, human-readable terminal/polarity/current
 conventions and accepted DC voltages/currents/power with exact absorbed/delivered/
 zero classification. Junctions/terminals resolve net aliases/reference identity;
@@ -917,8 +919,35 @@ on both passed the same **268 core / 295 DC-enabled / 91 installed Tk** counts,
 plus import/CLI/CSV/dependency/editable checks under pinned NumPy 2.4.6. RESULTS-2
 is VERIFIED locally. No model/solver/math/schema/dependency changes or push.
 
+## Batch GUI-10: item search and camera reveal
+
+navigation.py builds immutable exact identities for components, free/owned nodes
+and wires; filters plain Unicode case-folded names/labels with 256-character bounds;
+and computes reveal points from saved geometry. Wire points use half path length,
+including repeated/coincident segments, without inventing connectivity. The lazy
+Find item dialog has a bounded table, namespace column, vertical/horizontal scroll,
+no-match/invalid-query recovery and keyboard selection. Raw IDs are separate from
+display text and are never evaluated as Canvas tag expressions. Ctrl+F works in
+canvas and read-only results. See ITEM_SEARCH.md.
+
+Show item revalidates the current graph, cancels pending route/paste, selects the
+target, opens the inspector and centers without changing zoom. Graph/history/
+revision/results/clipboard stay unchanged; camera changes follow normal dirty/save
+rules. Unknown targets fail before canceling active work. Ten pure/import tests
+and seven focused Tk workflows pass, including namespaced collisions, Unicode/
+special/long names, dialog recovery, current-state revalidation, camera-only saves,
+polyline centering, result/history preservation and keyboard scope. A limit-case
+catalog has all **1,500 items** (200 components, 500 nodes, 800 wires). The long-name
+scroll test initially exposed an expanding table; fixed viewport geometry and
+nonstretch columns now keep it bounded. Both interpreters passed **305 headless
+tests** and **98 source Tk workflows**; core-only passed **278 with 27 expected
+NumPy skips**. Fresh offline installs on both passed **278 core / 305 DC-enabled /
+98 installed Tk** and all import/CLI/CSV/dependency/editable checks with NumPy
+2.4.6. GUI-10 is VERIFIED locally; no push or hosted CI claim.
+
 ## Exact next action
 
-Commit RESULTS-2, then implement item search/reveal for larger
-schematics with exact identity and camera/history tests. Keep phase 6 in progress.
+Commit GUI-10. Then split the growing opt-in Tk harness into
+feature modules while preserving headless discovery, installed isolation, test
+names/order and main-thread cleanup. Keep phase 6 in progress.
 Obtain hosted CI evidence after a user push; pushing is not authorized here.

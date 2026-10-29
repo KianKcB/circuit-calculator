@@ -114,6 +114,14 @@ accommodate an implementation error.
 
 ## Latest local run: 2026-10-29
 
+GUI-10 passed **305 headless tests / 98 source Tk workflows** on both interpreters,
+with **278 core plus 27 expected skips**. Fresh offline core/DC/GUI installations
+on both passed those same counts and origin/CLI/CSV/dependency/editable checks.
+Ten navigation/import tests and seven GUI workflows cover exact identities,
+case/Unicode/special names, alias labels, bounded queries, 1,500-item catalogs,
+polyline midpoint/degeneracy, no-match recovery, long-name horizontal scrolling,
+current-state revalidation, camera-only dirty/save and keyboard/modal behavior.
+
 RESULTS-2 passed **295 headless tests / 91 source Tk workflows** on both local
 interpreters, with **268 core plus 27 expected skips** without NumPy. Fresh offline
 installs on both passed **268 core / 295 DC-enabled / 91 installed Tk** and all

@@ -29,7 +29,7 @@ class ShortcutTests(unittest.TestCase):
     def test_application_actions_shift_redo_and_caps_lock(self):
         for key, code, state, expected in (('z', 90, 4, 'undo'), ('Z', 90, 5, 'redo'),
                 ('y', 89, 6, 'redo'), ('s', 83, 6, 'save_project'),
-                ('S', 83, 7, 'save_project_as'), ('o', 79, 4, 'open_project')):
+                ('S', 83, 7, 'save_project_as'), ('o', 79, 4, 'open_project'), ('f', 70, 4, 'find_item')):
             with self.subTest(key=key, state=state):
                 self.assertEqual(shortcut_action(key, code, state, scope='application', platform='linux'), expected)
 

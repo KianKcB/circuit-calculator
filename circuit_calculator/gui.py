@@ -16,6 +16,7 @@ from .viewport import clamp_zoom, fit_zoom, scroll_region, scroll_fraction
 from .quantities import parse_quantity, format_quantity
 from .shortcuts import shortcut_action
 from .inspection import selection_text
+from .navigation import selection_position
 
 
 class CircuitEditor:
@@ -84,7 +85,7 @@ class CircuitEditor:
         ttk.Checkbutton(wire_actions, text='Right-angle wires', variable=self.orthogonal,
                         command=self.routing_style_changed).pack(side='left', padx=8)
         for label, command in (('Fit circuit', self.fit_circuit), ('100%', lambda: self.set_zoom(1)),
-                               ('Project details', self.edit_details)):
+                               ('Project details', self.edit_details), ('Find item', self.find_item)):
             button = ttk.Button(header, text=label, command=command)
             button.pack(side='right', padx=3)
             self.buttons[label] = button
@@ -757,6 +758,27 @@ class CircuitEditor:
             self.status.set('Created an unconnected duplicate. Move it and wire its terminals before analysis.')
         except (TypeError, ValueError) as error:
             self._error(error)
+
+    def find_item(self):
+        from .editor_dialogs import ask_find_item
+        selected = ask_find_item(self.root, self.session.state)
+        if selected is None:
+            return
+        try:
+            self.reveal_item(selected)
+        except (ValueError, TypeError) as error:
+            self._error(error)
+
+    def reveal_item(self, selection):
+        x, y = selection_position(self.session.state, selection)
+        self.cancel()
+        self.selected = selection
+        self.draw()
+        self.result_tabs.select(self.inspection_tab)
+        self._center_pixels(x * self.zoom, y * self.zoom)
+        self._update_dirty()
+        self.canvas.focus_set()
+        self.status.set('Item selected and centered. Zoom, connections and current results are preserved.')
 
     def edit_details(self):
         from .editor_dialogs import ask_project_details

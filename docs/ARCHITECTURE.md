@@ -61,6 +61,12 @@ are transient scrollable views. Inspection does not establish correspondence for
 arbitrary external state/result pairs, solve circuits or infer per-wire current.
 Cached identical text avoids clearing user selection on camera/preview redraws.
 See RESULT_INSPECTION.md for sign, alias and stale-result behavior.
+navigation.py catalogs exact namespace-qualified selections and filters plain
+case-folded substrings. Reveal positions use saved node/component coordinates or
+polyline half-length, not coordinate-based connectivity or Canvas tag expressions.
+The Find dialog returns only an identity, which the controller validates against
+current state before selecting/centering. Search is transient; reveal updates only
+selection/camera while preserving graph, revision and accepted results.
 Wire owns an immutable tuple of Waypoint bends. Path points use node positions
 at the ends and fixed world-coordinate bends inside; only Wire.first/second
 participate in net resolution. Splitting explicitly creates/reuses a junction

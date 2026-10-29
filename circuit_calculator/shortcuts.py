@@ -22,7 +22,7 @@ def shortcut_action(keysym, keycode, state, *, scope, platform=None):
             return 'redo' if state & 1 else 'undo'
         if key == 's':
             return 'save_project_as' if state & 1 else 'save_project'
-        return {'y': 'redo', 'o': 'open_project'}.get(key)
+        return {'y': 'redo', 'o': 'open_project', 'f': 'find_item'}.get(key)
     if scope == 'canvas':
         return {'r': 'rotate', 'f': 'fit_circuit'}.get(key)
     return None

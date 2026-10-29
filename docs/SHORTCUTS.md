@@ -14,7 +14,7 @@ Shift/Caps Lock must not prevent ordinary letter shortcuts.
 Canvas-only commands: R rotates a selected component or pending paste; F fits the
 circuit; Ctrl+C/V/D copy, begin paste and duplicate. Application commands:
 Ctrl+Z Undo, Ctrl+Y or Ctrl+Shift+Z Redo, Ctrl+S Save Project, Ctrl+Shift+S Save As,
-Ctrl+O Open Project. Escape, F2, F5, Delete, Backspace and Space retain existing
+Ctrl+O Open Project, Ctrl+F Find item. Escape, F2, F5, Delete, Backspace and Space retain existing
 bindings. Never intercept ordinary letters outside the canvas.
 
 Global commands also work while the read-only results text has focus. Its native
