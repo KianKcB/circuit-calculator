@@ -116,3 +116,13 @@ def render_component_preview(canvas, template, x, y, zoom):
     unit = {'resistor': 'ohm', 'voltage': 'V', 'current': 'A'}[template.kind]
     canvas.create_text(cx, cy + 32 * zoom, text=f'Paste {template.kind}: {format_quantity(template.value, unit)}',
                        fill=color, anchor='n', tags=tag)
+
+
+def render_node_annotations(canvas, state, labels, zoom):
+    """Decorative values only: no electrical hit tags and no base content bounds."""
+    canvas.delete('result-annotation')
+    for position in state.positions:
+        if position.node in labels:
+            canvas.create_text(position.x * zoom + 20, position.y * zoom + 3,
+                               text=labels[position.node], anchor='nw',
+                               fill='#1f6650', font=('Segoe UI', 9), tags=('result-annotation',))

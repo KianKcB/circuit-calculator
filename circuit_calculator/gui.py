@@ -11,12 +11,13 @@ from circuit_calculator.schematic import (EditorSession, Position, Schematic, Wi
                        component, divider_example, terminals, value_of, orthogonal_bends)
 from circuit_calculator.project_io import (SchematicProject, ViewState, load_project,
                                           save_project as write_project)
-from .canvas_renderer import render_schematic, render_component_preview
+from .canvas_renderer import render_schematic, render_component_preview, render_node_annotations
 from .viewport import clamp_zoom, fit_zoom, scroll_region, scroll_fraction
 from .quantities import parse_quantity, format_quantity
 from .shortcuts import shortcut_action
 from .inspection import selection_text
 from .navigation import selection_position
+from .annotations import node_voltage_annotations
 
 
 class CircuitEditor:
@@ -84,6 +85,10 @@ class CircuitEditor:
         self.horizontal_first = True
         ttk.Checkbutton(wire_actions, text='Right-angle wires', variable=self.orthogonal,
                         command=self.routing_style_changed).pack(side='left', padx=8)
+        self.node_voltages = tk.BooleanVar(value=False)
+        self.annotation_button = ttk.Checkbutton(wire_actions, text='Node voltages', variable=self.node_voltages,
+                                                command=self.toggle_annotations)
+        self.annotation_button.pack(side='left', padx=8)
         for label, command in (('Fit circuit', self.fit_circuit), ('100%', lambda: self.set_zoom(1)),
                                ('Project details', self.edit_details), ('Find item', self.find_item)):
             button = ttk.Button(header, text=label, command=command)
@@ -200,6 +205,22 @@ class CircuitEditor:
         self.results.insert('1.0', text)
         self.results.configure(state='disabled')
         self._refresh_inspection()
+        self._draw_annotations()
+
+    def toggle_annotations(self):
+        self._draw_annotations()
+        self.status.set('Node voltages relative to the simulation reference; (ref) marks its net.'
+                        if self.node_voltages.get() and self.session.result is not None else
+                        'No current DC result. Run Simulate DC (F5) to show node voltages.'
+                        if self.node_voltages.get() else 'Node-voltage labels hidden.')
+
+    def _draw_annotations(self, *, visible=True):
+        labels = node_voltage_annotations(self.session.state, self.session.result) if visible and self.node_voltages.get() else {}
+        render_node_annotations(self.canvas, self.session.state, labels, self.zoom)
+        annotation_bounds = self.canvas.bbox('result-annotation')
+        base = self._content_bounds
+        self._fit_bounds = (min(base[0], annotation_bounds[0]), min(base[1], annotation_bounds[1]),
+                            max(base[2], annotation_bounds[2]), max(base[3], annotation_bounds[3])) if annotation_bounds else base
 
     def _refresh_inspection(self):
         solving = self.future is not None and self.submitted_revision == self.session.revision
@@ -602,6 +623,7 @@ class CircuitEditor:
         self._preview_route()
         if self.mode == 'paste' and self.paste_template is not None and self.paste_position is not None:
             render_component_preview(self.canvas, self.paste_template, *self.paste_position, self.zoom)
+        self._draw_annotations(visible=preview is None and schematic is None)
         self._refresh_inspection()
 
     def change_zoom(self, factor):
@@ -674,12 +696,12 @@ class CircuitEditor:
             return
         # Text stays at a readable fixed size, so remeasure after scaling geometry.
         for _ in range(6):
-            target = fit_zoom(self.zoom, self._content_bounds, width, height)
+            target = fit_zoom(self.zoom, self._fit_bounds, width, height)
             if abs(target - self.zoom) < 1e-4:
                 break
             self.zoom = target
             self.draw()
-        bounds = self._content_bounds
+        bounds = self._fit_bounds
         self._center_pixels((bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2)
         self._update_dirty()
         limited = bounds[2] - bounds[0] > width - 64 or bounds[3] - bounds[1] > height - 64

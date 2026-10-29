@@ -114,6 +114,19 @@ accommodate an implementation error.
 
 ## Latest local run: 2026-10-29
 
+ANNOTATE-1 passed **317 headless tests** on Python 3.11.9/3.14.6, with **288 core
+plus 29 optional-NumPy skips** without site-packages. Default discovery imports no
+Tk. Six pure/reference tests and six GUI workflows cover signed/reference-relative
+node voltages, alias reference markers, missing/range failures, formatting,
+serialization preservation, decorative tags, preview hiding, current-result-only
+refresh, camera/dirty invariance and Fit with fixed-size labels at several zooms.
+Both interpreters passed **109 source Tk workflows**. Fresh offline installations
+on both passed **288 core plus 29 skips / 317 DC-enabled / 109 installed Tk**, with
+origin/command/CSV/dependency/editable validation under pinned NumPy 2.4.6.
+Native review verified current node/reference labels, Fit, rotation invalidation,
+Undo and recomputation; common routed-divider labels were readable.
+The local package is 0.18.0. Hosted Linux execution remains unverified.
+
 PROBE-1 passed **311 headless tests** on Python 3.11.9 and 3.14.6; the core-only
 run passed **283 with 28 expected skips**. Both interpreters passed the full
 **102-workflow** source suite, then a new minimum-window/keyboard test passed

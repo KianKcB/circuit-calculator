@@ -17,6 +17,7 @@ if '--installed' in sys.argv:
                    'circuit_calculator.editor_dialogs', 'circuit_calculator.shortcuts', 'circuit_calculator.inspection',
                    'circuit_calculator.navigation',
                    'circuit_calculator.probe', 'circuit_calculator.probe_panel',
+                   'circuit_calculator.annotations',
                    'circuit_calculator.schematic', 'circuit_calculator.dc', 'circuit_calculator.project_io'):
         spec = importlib.util.find_spec(module)
         if spec is None or spec.origin is None or not Path(spec.origin).resolve().is_relative_to(Path(sys.prefix).resolve()):
@@ -27,10 +28,11 @@ else:
 
 # Only test helpers are added in installed mode; never the product checkout root.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tests'))
-from gui_workflows import base, clipboard, documents, editing, navigation, probe, results, routing, shortcuts, viewport
+from gui_workflows import annotations, base, clipboard, documents, editing, navigation, probe, results, routing, shortcuts, viewport
 
 
 class TkWorkflowTests(
+    annotations.AnnotationsMixin,
     clipboard.ClipboardMixin,
     documents.DocumentsMixin,
     editing.EditingMixin,

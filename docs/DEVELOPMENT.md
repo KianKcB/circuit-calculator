@@ -14,7 +14,7 @@ The installable package requires Python >=3.11. Maintained CI targets CPython
 3.11-3.14 on Windows and Linux; other versions/platforms are not in the matrix.
 This replaces the previously unverified README Python 3.7 support claim. The
 installed flat imports and root launcher remain supported. The current
-local package version is 0.17.0; no release or registry publication has occurred.
+local package version is 0.18.0; no release or registry publication has occurred.
 The project's license is still undecided; no license grant is invented by packaging.
 
 For source development on Windows:
@@ -165,3 +165,7 @@ probe.py resolves two endpoint voltages and guards finite subtraction;
 probe_panel.py owns the lazy Tk pickers and transient revision-scoped choices.
 The controller passes accepted results through the existing refresh path.
 See VOLTAGE_PROBE.md for polarity and invalidation rules.
+annotations.py formats accepted node voltages by exact endpoint identity.
+The renderer draws decorative values with no electrical hit tags. Fit includes
+their bounds, while the base scroll region/saved view fractions stay independent
+of annotations. See RESULT_ANNOTATIONS.md for the scope and layout limitations.

@@ -1,9 +1,9 @@
 # Project status and continuation
 
-Date: 2026-10-29. This session began at `ad3f64b` with a clean working tree and
+Date: 2026-10-29. This session began at `8881704` with a clean working tree and
 no unrelated changes. The user has authorized staging
 and committing completed local batches; pushing remains a separate action.
-Package version is now 0.17.0;
+Package version is now 0.18.0;
 electrical document v1 and schematic-project v3 are separate formats. Project-v1/v2
 loading remains supported.
 Use README and DEVELOPMENT.md for current package paths/commands; historical
@@ -1006,10 +1006,42 @@ the probe correctly rejected their overflowing difference on Python 3.11.
 The package version is 0.17.0; native v1/project v3/CSV v1 and dependencies remain.
 PROBE-1 is locally VERIFIED. Hosted execution and publication remain unverified.
 
+## Batch ANNOTATE-1: optional schematic node-voltage labels
+
+Base `8881704`, no unrelated changes. The Node voltages checkbox opts into
+decorative values beside every junction and component terminal. Pure annotations.py
+resolves wire aliases and formats accepted DC node voltages at nine significant
+digits; reference-net aliases carry `(ref)`. The renderer gives value text only
+decorative tags, with no electrical hit identities. The values participate in Fit,
+but the base scroll region is unchanged so toggles/accepted results preserve
+camera fractions and dirty state. Geometric drag previews suppress values.
+
+Starting another solve, editing/history and new/open clear obsolete values;
+failed or rejected stale jobs cannot restore them. The checkbox is transient,
+defaults off, and adds no saved data. Dense layouts may still overlap labels;
+automatic collision avoidance, movable labels and branch annotations are planned.
+
+The baseline 311-test suite passed before edits. Source headless checks now pass
+**317 tests** on Python 3.11.9/3.14.6; core-only **288 passed plus 29 NumPy skips**.
+Six pure/import/reference tests and six opt-in GUI workflows cover analytical
+signs and reference shifts, same-net aliases, missing/invalid values, immutable
+exports, decorative tags, preview suppression, camera/dirty preservation, Fit at
+several zooms/minimum window, special identities and pending/failed/stale results.
+Both interpreters passed all **109 source GUI workflows**. Fresh offline
+installations on both passed **288 core plus 29 skips / 317 DC-enabled / 109 installed
+Tk**, including origin/command/CSV/dependency/editable checks under NumPy 2.4.6.
+Native review verified checkbox enablement, 12 V/8 V/reference-net labels, Fit,
+rotation invalidation, Undo without stale values and recomputation. The routed
+review copy is .build-check/2026-10-29-v018-review.ccproj.json.
+The local package is 0.18.0;
+core circuit/formula/solver/schematic, dependencies and formats are unchanged.
+ANNOTATE-1 is locally VERIFIED. No push, hosted dispatch or publication occurred;
+hosted Linux results remain unverified.
+
 ## Exact next action
 
-Review the completed PROBE-1 commit. Next specify optional schematic result
-annotations, including label placement,
-reference/sign conventions and stale-result behavior before implementation.
-Keep phases 6/7 in progress and never infer unresolved individual wire currents.
-Obtain hosted CI evidence after a user push; pushing is not authorized here.
+Review the completed ANNOTATE-1 commit. Next specify component current/power
+annotations with explicit terminal direction,
+passive sign convention, label placement and freshness tests. Automatic collision
+avoidance remains planned. Keep phases 6/7 in progress; individual wire current
+is unresolved. Obtain hosted CI evidence after a user push; pushing is not authorized.

@@ -4,6 +4,9 @@ Two-point DC probes use pure probe.py arithmetic and a lazy probe_panel.py UI.
 Only current EditorSession results are read. Endpoint choices are transient and
 clear on document revision changes; probes never change the graph or persistence.
 See [VOLTAGE_PROBE.md](VOLTAGE_PROBE.md).
+Optional node-voltage annotations use pure annotations.py formatting and decorative
+Canvas labels. They participate in Fit, with base scroll-region bounds unchanged,
+and are never persisted. See [RESULT_ANNOTATIONS.md](RESULT_ANNOTATIONS.md).
 
 The local checkout is authoritative. Application implementations live in the
 `circuit_calculator/` package. Its calculations.py contains standalone formulas,

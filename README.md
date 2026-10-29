@@ -46,7 +46,7 @@ progress and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for development commands
   Windows and Linux. Newer versions are outside the current test matrix.
 - The formula CLI and circuit model need only the standard library. DC solving
   adds the optional NumPy dependency.
-- Version 0.17.0 is currently a local development package. Installation commands
+- Version 0.18.0 is currently a local development package. Installation commands
   below use this checkout; it has not been published to a package registry.
 
 Open a terminal in the project directory and check that Python is available:
@@ -401,6 +401,11 @@ or component terminals. **Swap A / B** reverses polarity; **Clear** resets the
 choices. Only current accepted results appear. Choices clear after document edits,
 Undo/Redo or opening a project, and remain transient when saving. See
 [VOLTAGE_PROBE.md](docs/VOLTAGE_PROBE.md) for range and freshness rules.
+Enable **Node voltages** to show current voltages beside junctions and terminals;
+`(ref)` marks the reference net. Labels use the simulation reference and clear
+when results become outdated. **Fit circuit** includes the labels. The display
+choice is temporary and does not change the saved circuit. Dense layouts may
+still have overlapping labels. See [RESULT_ANNOTATIONS.md](docs/RESULT_ANNOTATIONS.md).
 **Find item** (Ctrl+F) filters components, junctions, terminals and wires by name
 or terminal label. **Show item** selects and centers a match without changing
 zoom, connectivity or current results. Matching names in different categories
@@ -416,7 +421,8 @@ show a different view, while electrical data and layout coordinates are preserve
 
 The following are planned ideas and are **not implemented**:
 
-- Multi-component/OS-clipboard copy/paste, obstacle-aware routing, result annotations and richer schematic editing.
+- Multi-component/OS-clipboard copy/paste, obstacle-aware routing, branch annotations,
+  automatic label collision avoidance and richer schematic editing.
 - Extended DC analysis with controlled sources and equivalent-port calculations.
 - RC and RLC circuit analysis.
 
