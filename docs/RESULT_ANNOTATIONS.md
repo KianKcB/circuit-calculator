@@ -20,7 +20,8 @@ non-finite values are rejected. The caller establishes revision correspondence.
 The renderer places separate decorative text below/right of each endpoint name,
 using fixed readable font size and no electrical entity tags. Values cannot create
 connections or override hit targets. Dense/overlapping layouts may still overlap;
-automatic collision avoidance and movable annotations remain future work.
+bounded optional reduction is defined in [ANNOTATION_LAYOUT.md](ANNOTATION_LAYOUT.md).
+Guaranteed global separation and movable annotations remain future work.
 
 Annotation bounds participate in Fit but do not change the base scroll region.
 This preserves camera position, saved view fractions and dirty state when labels

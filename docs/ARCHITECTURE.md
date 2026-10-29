@@ -11,6 +11,10 @@ Component current/power blocks reuse actual component label boxes/anchors with
 generated indexes. Their signed values come from accepted ElementResult snapshots,
 with explicit terminal direction and passive power convention. Both annotation
 types share freshness/Fit behavior. See [COMPONENT_ANNOTATIONS.md](COMPONENT_ANNOTATIONS.md).
+label_layout.py is a pure bounded rectangle-placement service with a sparse index,
+fixed candidates and explicit unresolved/budget feedback. The Canvas adapter supplies
+measured boxes and draws non-electrical dashed guides. No layout preference or
+result position is persisted. See [ANNOTATION_LAYOUT.md](ANNOTATION_LAYOUT.md).
 
 The local checkout is authoritative. Application implementations live in the
 `circuit_calculator/` package. Its calculations.py contains standalone formulas,

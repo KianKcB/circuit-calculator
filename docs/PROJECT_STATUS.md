@@ -3,7 +3,7 @@
 Date: 2026-10-29. This session began at `a5e41f4` with a clean working tree and
 no unrelated changes. The user has authorized staging
 and committing completed local batches; pushing remains a separate action.
-Package version is now 0.19.0;
+Package version is now 0.20.0;
 electrical document v1 and schematic-project v3 are separate formats. Project-v1/v2
 loading remains supported.
 Use README and DEVELOPMENT.md for current package paths/commands; historical
@@ -1074,10 +1074,57 @@ examples and dependency declarations are unchanged.
 ANNOTATE-2 is locally VERIFIED. Hosted Linux execution remains unverified; no push,
 hosted dispatch or publication occurred.
 
+## Batch ANNOTATE-3: bounded annotation overlap reduction
+
+Base `fe3430c`, no unrelated changes. Pure label_layout.py processes measured
+rectangles in stable order with 25 bounded offsets, 3px clearance, at most 700
+labels/4096 obstacles and 200,000 intersection checks. A 64px sparse index caps
+rectangle cell expansion; sorted grid/global IDs stream and deduplicate lazily.
+This avoids repeated saturated-list sorting before early collision rejection.
+Unresolved/budget-limited labels stay at their original positions, with a persistent
+panel note. Conservative wire/path boxes can reject physically free space.
+
+Reduce overlaps defaults off and is transient. The renderer moves only accepted
+result text, with dashed non-electrical guides to endpoint dots/component labels.
+Geometry, electrical identities, document/history, camera fractions and dirty state
+remain unchanged by toggles. Text/guides participate in Fit; clearing results or
+previewing geometry clears guides and feedback. Dense/global optimality is not claimed.
+
+Adversarial Fit cases first exposed the old six-step zoom assumption stopping with
+cropped text above the minimum zoom. Reflow mode now uses bounded shrink-only
+refinement after its first estimate, then checks the 40% floor if needed. Normal
+Fit stays unchanged when no result labels are being reflowed. Asymmetric, dense,
+coincident, horizontal and vertical scenes pass the focused regression.
+
+Sixteen pure layout tests cover independent geometry/gaps/negative cells,
+translation invariance, deterministic order, sparse/full input limits, finite/type
+guards, infinite iterables, global/local saturation and explicit budget fallback.
+Seven Tk workflows cover measured positions, guides/hit isolation, feedback,
+camera/dirty/independent options, preview/pending/failed/stale clearing, minimum
+controls and difficult Fit geometries. Both interpreters passed **342 headless /
+124 source Tk** checks; core-only **311 passed plus 31 expected skips**. Fresh offline
+installations on both passed **311 core plus 31 skips / 342 DC-enabled / 124 installed
+Tk**, including origin/command/CSV/dependency/editable checks under pinned NumPy
+2.4.6. Extracted-source core tests passed the same
+342/31-skip run and its benchmark executed with -S outside its project directory.
+Native review verified both annotation modes, dashed guides, reduction off/on,
+unchanged camera/current values and Fit. The saved v020 review copy retains the
+original routed graph/metadata, with only the fitted camera changed.
+
+Source-only benchmark_labels.py records five diagnostic scenes, with no timing
+gate. Python 3.11 initial global-covering/local-saturated passes measured about
+1.33s/1.22s before lazy streaming; final three-repeat medians were about 0.139s/
+0.181s with unchanged 17,500/25,900 checks and all 700 fallback labels retained.
+These are local diagnostics, not platform-independent responsiveness claims.
+The package is 0.20.0; model/formulas/DC/schematic, dependencies, examples and
+native/project/CSV formats are unchanged.
+ANNOTATE-3 is locally VERIFIED. Hosted Linux execution remains unverified; no
+push, hosted dispatch or publication occurred.
+
 ## Exact next action
 
-Review the completed ANNOTATE-2 commit. Next specify bounded
-deterministic annotation collision reduction with geometry/text obstacles, explicit
-dense-layout fallback and Fit/camera invariants. Movable labels/plots remain planned.
-Keep phases 6/7 in progress; individual wire current is unresolved. Hosted evidence
-requires a user push; pushing is not authorized here.
+Review the completed ANNOTATE-2 and ANNOTATE-3 commits. Next specify segment-aware
+wire obstacles with bounded resources and independent
+clearance checks, reducing conservative whole-path false blockers. Movable labels
+and plots remain planned. Keep phases 6/7 in progress; individual wire current is
+unresolved. Hosted evidence requires a user push; pushing is not authorized here.

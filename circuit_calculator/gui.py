@@ -12,7 +12,7 @@ from circuit_calculator.schematic import (EditorSession, Position, Schematic, Wi
 from circuit_calculator.project_io import (SchematicProject, ViewState, load_project,
                                           save_project as write_project)
 from .canvas_renderer import (render_schematic, render_component_preview, render_node_annotations,
-                              render_component_annotations)
+                              render_component_annotations, layout_result_annotations)
 from .viewport import clamp_zoom, fit_zoom, scroll_region, scroll_fraction
 from .quantities import parse_quantity, format_quantity
 from .shortcuts import shortcut_action
@@ -94,6 +94,10 @@ class CircuitEditor:
         self.component_annotation_button = ttk.Checkbutton(wire_actions, text='Component I / P',
             variable=self.component_results, command=self.toggle_annotations)
         self.component_annotation_button.pack(side='left', padx=8)
+        self.reduce_overlaps = tk.BooleanVar(value=False)
+        self.overlap_button = ttk.Checkbutton(wire_actions, text='Reduce overlaps',
+            variable=self.reduce_overlaps, command=self.toggle_annotations)
+        self.overlap_button.pack(side='left', padx=8)
         for label, command in (('Fit circuit', self.fit_circuit), ('100%', lambda: self.set_zoom(1)),
                                ('Project details', self.edit_details), ('Find item', self.find_item)):
             button = ttk.Button(header, text=label, command=command)
@@ -128,6 +132,8 @@ class CircuitEditor:
         panel = ttk.Frame(body, padding=(12, 4))
         body.add(panel, weight=1)
         ttk.Label(panel, text='DC results', font=('Segoe UI', 12, 'bold')).pack(anchor='w')
+        self.annotation_note = ttk.Label(panel, foreground='#8a4d00', wraplength=240)
+        self._annotation_note_text = ''
         self.result_tabs = ttk.Notebook(panel)
         self.result_tabs.pack(fill='both', expand=True, pady=8)
         self.all_results_tab = ttk.Frame(self.result_tabs)
@@ -220,14 +226,26 @@ class CircuitEditor:
             message = 'No current DC result. Run Simulate DC (F5) to show result labels.'
         else:
             message = 'Node V: simulation reference. Component +I: shown terminal order. Positive P: absorbed; negative P: delivered.'
+        if self.reduce_overlaps.get():
+            message += ' Dashed guides link moved labels.'
         self.status.set(message)
 
     def _draw_annotations(self, *, visible=True):
         labels = node_voltage_annotations(self.session.state, self.session.result) if visible and self.node_voltages.get() else {}
-        render_node_annotations(self.canvas, self.session.state, labels, self.zoom)
+        anchors = render_node_annotations(self.canvas, self.session.state, labels, self.zoom)
         components = component_annotations(self.session.state, self.session.result) if visible and self.component_results.get() else {}
-        render_component_annotations(self.canvas, self.session.state, components)
-        annotation_bounds = self.canvas.bbox('result-annotation')
+        anchors.update(render_component_annotations(self.canvas, self.session.state, components))
+        self.annotation_layout = layout_result_annotations(self.canvas, anchors, enabled=self.reduce_overlaps.get())
+        note = ('Some labels may still overlap. Try zooming in or moving components.'
+                if self.annotation_layout is not None and self.annotation_layout.unresolved else '')
+        if note != self._annotation_note_text:
+            self.annotation_note.configure(text=note)
+            if note:
+                self.annotation_note.pack(anchor='w', before=self.result_tabs, pady=(4, 0))
+            else:
+                self.annotation_note.pack_forget()
+            self._annotation_note_text = note
+        annotation_bounds = self.canvas.bbox('result-annotation', 'annotation-leader')
         base = self._content_bounds
         self._fit_bounds = (min(base[0], annotation_bounds[0]), min(base[1], annotation_bounds[1]),
                             max(base[2], annotation_bounds[2]), max(base[3], annotation_bounds[3])) if annotation_bounds else base
@@ -704,12 +722,24 @@ class CircuitEditor:
         if min(width, height) < 80:
             self.status.set('Fit circuit needs a visible drawing area.')
             return
-        # Text stays at a readable fixed size, so remeasure after scaling geometry.
-        for _ in range(6):
+        # Reflow can change discontinuously with zoom. After the first estimate,
+        # overlap mode only shrinks until the actual measured scene fits.
+        reflow = (self.reduce_overlaps.get() and self.session.result is not None
+                  and (self.node_voltages.get() or self.component_results.get()))
+        for attempt in range(16 if reflow else 6):
             target = fit_zoom(self.zoom, self._fit_bounds, width, height)
+            if reflow and attempt:
+                bounds = self._fit_bounds
+                if bounds[2] - bounds[0] <= width - 64 and bounds[3] - bounds[1] <= height - 64:
+                    break
+                target = clamp_zoom(min(target, self.zoom * .95))
             if abs(target - self.zoom) < 1e-4:
                 break
             self.zoom = target
+            self.draw()
+        bounds = self._fit_bounds
+        if reflow and self.zoom > .4 and (bounds[2] - bounds[0] > width - 64 or bounds[3] - bounds[1] > height - 64):
+            self.zoom = .4
             self.draw()
         bounds = self._fit_bounds
         self._center_pixels((bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2)

@@ -114,6 +114,24 @@ accommodate an implementation error.
 
 ## Latest local run: 2026-10-29
 
+ANNOTATE-3 passes **342 headless tests / 124 source Tk workflows** on Python
+3.11.9/3.14.6; core-only **311 passed plus 31 expected NumPy skips**.
+Sixteen pure tests cover measured rectangle validation, independent gap/intersection
+oracles, deterministic placement, translation/cell invariance, maximum input counts,
+infinite iterables, sparse/global/local saturation and budget/dense fallback.
+Seven Tk tests cover actual text/guide placement, exact decorative tags, persistent
+feedback, camera/document invariance, independent transient options, preview/result
+freshness, minimum controls and Fit across dense/asymmetric/coincident geometries.
+The difficult-Fit regression initially failed above the zoom floor and passes
+after bounded shrink-only refinement. Fresh offline installations on both passed
+**311 core plus 31 skips / 342 DC-enabled / 124 installed Tk**, with origin/command/
+CSV/dependency/editable validation under pinned NumPy 2.4.6. Extracted
+sdist core discovery ran all 342 with 31 expected skips; its benchmark also passed
+with -S from outside the extracted project. Native review verified both modes,
+dashed guides, off/on camera/value preservation and Fit of the routed divider.
+`scripts/benchmark_labels.py --repeats 3` records five bounded source-only timing/
+count diagnostics without a timing gate. See ANNOTATION_LAYOUT.md for limits.
+
 ANNOTATE-2 passed **326 headless tests** on Python 3.11.9/3.14.6 and **295 core plus
 31 expected NumPy skips** without site-packages. Nine pure/physical tests cover
 signed I/P, explicit terminal direction, current sources, reversed orientations,

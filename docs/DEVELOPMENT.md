@@ -14,7 +14,7 @@ The installable package requires Python >=3.11. Maintained CI targets CPython
 3.11-3.14 on Windows and Linux; other versions/platforms are not in the matrix.
 This replaces the previously unverified README Python 3.7 support claim. The
 installed flat imports and root launcher remain supported. The current
-local package version is 0.19.0; no release or registry publication has occurred.
+local package version is 0.20.0; no release or registry publication has occurred.
 The project's license is still undecided; no license grant is invented by packaging.
 
 For source development on Windows:
@@ -174,3 +174,10 @@ component's actual label box/anchor via generated indexes, including parallel
 legacy symbols. Clear empty results before consulting old scene indexes during
 edits/deletion. Both annotation toggles use the same freshness/Fit path. See
 COMPONENT_ANNOTATIONS.md for signs, placement and validation.
+label_layout.py places measured rectangles with bounded candidates, input counts,
+spatial-index expansion and intersection checks. Sorted grid/global obstacle IDs
+merge and deduplicate lazily; do not materialize/sort saturated lists per candidate. The Canvas
+adapter moves only current result text and clears old guides/feedback with results.
+Run `python -B scripts/benchmark_labels.py --repeats 3` for source-only diagnostic
+timings at sparse, crowded, global-budget, covering and dense-bucket limits. Counts and
+determinism are checked; elapsed times are diagnostic, with no timing gate.

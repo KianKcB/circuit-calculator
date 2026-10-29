@@ -32,7 +32,8 @@ both annotation types. Edits/history/new/open/new solves clear obsolete values;
 failed or rejected stale worker jobs cannot restore them.
 
 Dense layouts may overlap labels, including between neighboring components or
-terminals. Automatic collision avoidance and movable labels remain planned.
+terminals. Optional bounded reduction is defined in [ANNOTATION_LAYOUT.md](ANNOTATION_LAYOUT.md).
+Guaranteed global separation and movable labels remain planned.
 Acceptance covers analytical resistor and signed voltage/current-source power,
 reference and orientation invariance, missing/zero/tiny/range values, all four
 rotations, legacy parallel symbols, special names, decorative tags, Fit/camera,

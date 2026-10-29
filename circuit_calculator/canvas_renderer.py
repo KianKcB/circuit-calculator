@@ -5,6 +5,7 @@ import math
 from .circuit import Resistor, VoltageSource
 from .schematic import terminals, value_of, ComponentPlacement
 from .quantities import format_quantity
+from .label_layout import Rect, place_labels
 
 
 def render_schematic(canvas, state, zoom, *, selected=None, selected_bend=None, pending=None, mode='select', preview=None):
@@ -122,11 +123,14 @@ def render_component_preview(canvas, template, x, y, zoom):
 def render_node_annotations(canvas, state, labels, zoom):
     """Decorative values only: no electrical hit tags and no base content bounds."""
     canvas.delete('result-annotation')
+    anchors = {}
     for position in state.positions:
         if position.node in labels:
-            canvas.create_text(position.x * zoom + 20, position.y * zoom + 3,
-                               text=labels[position.node], anchor='nw',
-                               fill='#1f6650', font=('Segoe UI', 9), tags=('result-annotation',))
+            item = canvas.create_text(position.x * zoom + 20, position.y * zoom + 3,
+                                      text=labels[position.node], anchor='nw',
+                                      fill='#1f6650', font=('Segoe UI', 9), tags=('result-annotation',))
+            anchors[item] = (position.x * zoom, position.y * zoom)
+    return anchors
 
 
 def render_component_annotations(canvas, state, labels):
@@ -135,8 +139,9 @@ def render_component_annotations(canvas, state, labels):
     if not labels:
         # Edits clear results before the old scene is rebuilt. Never consult its
         # previous component indexes against the changed document in that gap.
-        return
+        return {}
     elements = state.document.circuit.elements
+    anchors = {}
     for item in canvas.find_withtag('component-label'):
         index = next(int(tag.split(':', 1)[1]) for tag in canvas.gettags(item)
                      if tag.startswith('component-index:'))
@@ -151,5 +156,34 @@ def render_component_annotations(canvas, state, labels):
             x, y, anchor = bounds[2], bounds[3] + 4, 'ne'
         else:
             x, y, anchor = bounds[0], bounds[3] + 4, 'nw'
-        canvas.create_text(x, y, text=text, anchor=anchor, fill='#1f6650',
-                           font=('Segoe UI', 9), tags=('result-annotation', 'component-annotation'))
+        item = canvas.create_text(x, y, text=text, anchor=anchor, fill='#1f6650',
+                                  font=('Segoe UI', 9), tags=('result-annotation', 'component-annotation'))
+        anchors[item] = ((bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2)
+    return anchors
+
+
+def layout_result_annotations(canvas, anchors, *, enabled=False):
+    """Measure real text/geometry, move only result text and draw decorative guides."""
+    canvas.delete('annotation-leader')
+    if not enabled or not anchors:
+        return None
+    items = tuple(anchors)
+    original = tuple(Rect(*canvas.bbox(item)) for item in items)
+    obstacles = tuple(Rect(*bounds) for item in canvas.find_withtag('circuit-content')
+                      if (bounds := canvas.bbox(item)) is not None)
+    layout = place_labels(original, obstacles)
+    leaders = False
+    for item, old, new in zip(items, original, layout.rectangles):
+        x, y = new.left - old.left, new.top - old.top
+        if not (x or y):
+            continue
+        canvas.move(item, x, y)
+        source_x, source_y = anchors[item]
+        target_x = max(new.left, min(new.right, source_x))
+        target_y = max(new.top, min(new.bottom, source_y))
+        canvas.create_line(source_x, source_y, target_x, target_y, fill='#6d7580',
+                           width=1, dash=(2, 3), tags=('annotation-leader',))
+        leaders = True
+    if leaders:
+        canvas.tag_lower('annotation-leader', 'result-annotation')
+    return layout
