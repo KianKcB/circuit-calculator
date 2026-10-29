@@ -5,7 +5,8 @@ from collections import Counter
 import math
 
 from circuit_calculator.circuit import Circuit, CurrentSource, Resistor, VoltageSource
-from circuit_calculator.circuit_io import CircuitDocument
+from circuit_calculator.circuit_io import CircuitDocument, MAX_NAME_LENGTH
+from ._document_io import string_field
 
 MAX_JUNCTIONS = 100
 MAX_NODES = 500
@@ -432,6 +433,46 @@ class Schematic:
         elements = tuple(type(e)(e.name, *terminals(e), value) if e.name == name else e
                          for e in self.document.circuit.elements)
         return replace(self, document=self._circuit(elements=elements))
+
+    def rename(self, kind, name, new_name):
+        """Rename within one identity namespace, preserving graph and ordering."""
+        string_field(new_name, 'Name', MAX_NAME_LENGTH, ValueError)
+        if not new_name.strip():
+            raise ValueError('Name must not be empty')
+        circuit = self.document.circuit
+        if kind == 'element':
+            used = {e.name for e in circuit.elements}
+        elif kind == 'node':
+            if name in self.terminal_owners():
+                raise ValueError('Rename the component body; its terminal identities are fixed')
+            used = set(circuit.nodes)
+        elif kind == 'wire':
+            used = {w.name for w in self.wires}
+        else:
+            raise ValueError('Select a free junction, component or wire to rename')
+        if name not in used:
+            raise ValueError('Select an existing item to rename')
+        if new_name != name and new_name in used:
+            raise ValueError('That name is already used by another item of this kind')
+        if new_name == name:
+            return self
+        if kind == 'element':
+            return replace(self, document=self._circuit(elements=tuple(
+                type(e)(new_name, *terminals(e), value_of(e)) if e.name == name else e
+                for e in circuit.elements)), placements=tuple(
+                    replace(p, element=new_name) if p.element == name else p for p in self.placements))
+        if kind == 'wire':
+            return replace(self, wires=tuple(replace(w, name=new_name) if w.name == name else w
+                                             for w in self.wires))
+        def renamed(node):
+            return new_name if node == name else node
+        return replace(self, document=self._circuit(
+            nodes=tuple(renamed(n) for n in circuit.nodes),
+            elements=tuple(type(e)(e.name, *(renamed(n) for n in terminals(e)), value_of(e))
+                           for e in circuit.elements),
+            reference_node=renamed(circuit.reference_node)),
+            positions=tuple(replace(p, node=new_name) if p.node == name else p for p in self.positions),
+            wires=tuple(replace(w, first=renamed(w.first), second=renamed(w.second)) for w in self.wires))
 
     def delete(self, kind, name):
         circuit = self.document.circuit

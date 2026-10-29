@@ -46,7 +46,7 @@ progress and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for development commands
   Windows and Linux. Newer versions are outside the current test matrix.
 - The formula CLI and circuit model need only the standard library. DC solving
   adds the optional NumPy dependency.
-- Version 0.9.0 is currently a local development package. Installation commands
+- Version 0.10.0 is currently a local development package. Installation commands
   below use this checkout; it has not been published to a package registry.
 
 Open a terminal in the project directory and check that Python is available:
@@ -293,6 +293,9 @@ for the framework decision and supported scope.
    choose **Rotate 90°**, or press R while the canvas has focus. Rotation is
    clockwise and preserves terminal identities, source signs and attached wires.
    **Edit value**, **Delete**, **Undo/Redo** and Ctrl+Z/Ctrl+Y operate on the topology.
+   Select a component, free junction or wire and choose **Rename** (F2 on the
+   canvas) to change its name. Connections and polarity are preserved; owned
+   terminal identities stay fixed. Duplicate names within the same kind are rejected.
    Zoom with +/− and pan with scrollbars or the middle mouse button.
    **Fit circuit** (F on the canvas) fits the symbols, wires and labels;
    **100%** resets magnification. Zoom and resizing retain the viewed world center.
@@ -364,6 +367,7 @@ Bend handles and optional right-angle routing are available; obstacle avoidance
 and persistent orthogonal constraints remain planned.
 The electrical model and solver stay independent of Tk and layout coordinates.
 See [COMPONENT_EDITING.md](docs/COMPONENT_EDITING.md) for geometry and migration rules.
+See [IDENTITY_EDITING.md](docs/IDENTITY_EDITING.md) for name, unit and history rules.
 See [WIRE_ROUTING.md](docs/WIRE_ROUTING.md) for routing, splitting and crossing rules.
 See [BEND_EDITING.md](docs/BEND_EDITING.md) for bend handles and right-angle routing.
 See [VIEWPORT.md](docs/VIEWPORT.md) for camera behavior. Scroll bounds now follow

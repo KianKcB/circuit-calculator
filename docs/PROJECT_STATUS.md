@@ -1,9 +1,9 @@
 # Project status and continuation
 
-Date: 2026-10-28. CI-GUI was committed as `84a8bfd`; DC-GRID began with a
-clean working tree and no unrelated changes. The user has now authorized staging
+Date: 2026-10-29. GUI-7 began at `841d800` with a clean working tree and
+no unrelated changes. The user has authorized staging
 and committing completed local batches; pushing remains a separate action.
-Package version is now 0.9.0;
+Package version is now 0.10.0;
 electrical document v1 and schematic-project v3 are separate formats. Project-v1/v2
 loading remains supported.
 Use README and DEVELOPMENT.md for current package paths/commands; historical
@@ -727,9 +727,39 @@ external SPICE comparison. No claim of arbitrary-range/large-network reliability
 Package 0.9.0, native v1/project v3/CSV v1 remain unchanged. Hosted Linux CI is
 still unverified; no push/dispatch/publication performed.
 
+## Batch GUI-7: collision-safe names and explicit value units
+
+`Schematic.rename` atomically updates component/placement names, free-node
+endpoints/reference/positions, or wire names. Three separate namespaces preserve
+case and spaces; UTF-8/nonblank/256-character bounds match project persistence.
+Component terminal identities and wire bend geometry stay fixed. Owned terminal
+renames, collisions and missing selections fail without state changes. Existing
+value editing now states component-specific units and source orientation.
+
+The GUI adds Rename/F2, preserves selection under a new name and clears obsolete
+bend/drag handles. Successful changes invalidate results in one history step;
+cancel, invalid text and no-op retain results/revision. Wire controls use a
+separate row; all action buttons fit the supported 900x600 minimum window.
+Native v1, project v3, CSV v1, solver/model/math and dependencies are unchanged.
+See IDENTITY_EDITING.md for scope, design alternatives and limits.
+
+Source checks: **256 headless tests** passed on Python 3.11.9 and 3.14.6;
+without site-packages **232 passed, 24 expected NumPy skips**. Eight new headless
+tests cover naming, ordered graph equivalence, ownership, persistence, history
+and analytical 8 V / -0.048 W divider results. Tk checks cover actual canvas tags,
+save/history, rollback, stale worker completion, units and minimum-window layout.
+Final source runs passed **60 Tk workflows** on both interpreters. Fresh wheel
+checks on both passed **232 core tests plus 24 expected skips**, **256 DC tests**,
+and **60 isolated installed Tk workflows**, followed by editable/import/CLI/CSV
+checks. Installed NumPy was the pinned 2.4.6. The normal isolated build initially
+failed because PyPI DNS was unavailable. Exact pinned setuptools 84.2.1 and
+NumPy 2.4.6 wheels were recovered from the existing pip HTTP cache, ZIP-checked
+and supplied from ignored `.build-check/wheelhouse` using PIP_NO_INDEX and
+PIP_FIND_LINKS. The isolated sdist/wheel build and fresh environments then passed
+offline; no dependency pins were changed. Hosted Linux execution remains pending.
+
 ## Exact next action
 
-Review the five completed batches at this clean local commit checkpoint. Next scope is
-collision-safe component/junction naming/property editing and isolated component
-duplication, with endpoint/history/file tests. Keep full phase 6 in progress.
+GUI-7 is verified locally and ready for its commit. Next implement isolated component
+duplication with endpoint/history/file tests. Keep full phase 6 in progress.
 Obtain hosted CI evidence after a user push; pushing is not authorized here.

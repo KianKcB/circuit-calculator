@@ -14,7 +14,7 @@ The installable package requires Python >=3.11. Maintained CI targets CPython
 3.11-3.14 on Windows and Linux; other versions/platforms are not in the matrix.
 This replaces the previously unverified README Python 3.7 support claim. The
 installed flat imports and root launcher remain supported. The current
-local package version is 0.9.0; no release or registry publication has occurred.
+local package version is 0.10.0; no release or registry publication has occurred.
 The project's license is still undecided; no license grant is invented by packaging.
 
 For source development on Windows:
@@ -127,11 +127,11 @@ Use project_io.py for projects and circuit_io.py for electrical export/import;
 keep shared parsing/file primitives in _document_io.py. Never compile wires
 merely to save a project, and never persist trusted/cached numerical results.
 
-Run `python -B scripts/check_gui.py -v` for 54 Tk widget/workflow checks with
-a display and NumPy available. These tests are opt-in: the regular 248-test suite
-remains headless and needs no Tk import. Hosted CI currently exercises editor
-logic and package imports, not the interactive Tk tests. A future display-enabled
-CI lane can run them without weakening the core/DC dependency boundary.
+Run `python -B scripts/check_gui.py -v` for the opt-in Tk widget/workflow checks
+with a display and NumPy available. The regular unittest suite remains headless
+and needs no Tk import. The configured display-enabled CI lane runs installed
+Tk checks without weakening the core/DC dependency boundary; hosted evidence
+remains pending. See TESTING.md for counts and actual local verification.
 For bounded analytical grid timing/accuracy reports, run
 `python -B scripts/benchmark_dc.py --sizes 4 8 12 --repeats 3`.
 See DC_VALIDATION.md for the oracle proof, CLI/native integration, measured

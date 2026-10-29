@@ -112,7 +112,20 @@ Runtime tolerances and conditioning policy are documented in ARCHITECTURE.md.
 Expected reference answers are derived independently and must not be changed to
 accommodate an implementation error.
 
-## Latest local run: 2026-10-28
+## Latest local run: 2026-10-29
+
+GUI-7 source checks passed **256 headless tests** and **60 Tk workflows** on
+Python 3.11.9 and 3.14.6. Core-only mode passed 232 with 24 expected NumPy skips.
+Eight identity tests and six Tk workflows were added, including namespace/ground/
+terminal invariants, exact project/history recovery, analytical divider values,
+failed/no-op value edits, delayed-worker rejection and toolbar visibility at
+900x600. Native v1/project v3/CSV v1 and numerical engine files remain unchanged.
+Fresh installs on both interpreters passed the same 232 core/256 DC/60 Tk checks,
+plus command/import/CSV/editable/dependency validation. The isolated build and
+installs used cached exact pinned wheels offline after a PyPI DNS failure;
+details are in PROJECT_STATUS.md. Hosted Linux checks remain unverified.
+
+## Previous local run: 2026-10-28
 
 DC-GRID: **248 headless tests** passed on Python 3.11.9 and 3.14.6; without
 site-packages **225 passed with 23 expected NumPy skips**. Three grid tests were

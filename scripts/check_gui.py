@@ -43,6 +43,107 @@ from circuit_calculator.project_io import load_project, save_project, SchematicP
 
 
 class TkWorkflowTests(unittest.TestCase):
+    def test_action_buttons_are_reachable_at_minimum_window_size(self):
+        self.root.deiconify()
+        self.root.geometry('900x600')
+        self.root.update()
+        for name, button in self.app.buttons.items():
+            with self.subTest(button=name):
+                self.assertTrue(button.winfo_ismapped())
+                self.assertGreaterEqual(button.winfo_rootx(), self.root.winfo_rootx())
+                self.assertLessEqual(button.winfo_rootx() + button.winfo_width(),
+                                     self.root.winfo_rootx() + self.root.winfo_width())
+                self.assertGreater(button.winfo_width(), 40)
+        self.assertGreater(self.app.canvas.winfo_height(), 150)
+
+    def test_value_editor_reports_units_and_rejects_invalid_values_atomically(self):
+        self.app.simulate()
+        self.wait_for_result()
+        before, result, revision = self.app._snapshot(), self.app.session.result, self.app.session.revision
+        self.app.selected = ('element', 'R1')
+        for text in (None, '', 'NaN', 'Infinity', '0', '-1', '1e-1000', '1e1000', '1000'):
+            with self.subTest(text=text), patch('tkinter.simpledialog.askstring', return_value=text) as dialog:
+                self.app.edit_value()
+                self.assertIn('ohms', dialog.call_args.args[1])
+            self.assertEqual(self.app._snapshot(), before)
+            self.assertIs(self.app.session.result, result)
+            self.assertEqual(self.app.session.revision, revision)
+        self.app.selected = ('element', 'V1')
+        with patch('tkinter.simpledialog.askstring', return_value='-12') as dialog:
+            self.app.edit_value()
+            self.assertIn('V(+) - V(-)', dialog.call_args.args[1])
+        self.assertEqual(self.app.session.state.document.circuit.elements[0].voltage_volts, -12)
+        self.app.undo()
+        self.assertEqual(self.app.session.state, before.schematic)
+
+    def test_rename_component_updates_canvas_history_and_saved_project(self):
+        self.app._apply(self.app.session.state.place_component('R1', 320, 160, 0))
+        self.app.simulate()
+        self.wait_for_result()
+        before = self.app.session.state
+        self.app.selected = ('element', 'R1')
+        with patch('tkinter.simpledialog.askstring', return_value='مقاومت: input'):
+            self.app.buttons['Rename'].invoke()
+        self.assertEqual(self.app.selected, ('element', 'مقاومت: input'))
+        self.assertTrue(self.app.canvas.find_withtag('entity:element:مقاومت: input'))
+        self.assertIsNone(self.app.session.result)
+        self.assertTrue(self.app.buttons['Export CSV'].instate(['disabled']))
+        self.assertTrue(self.app.dirty)
+        changed = self.app.session.state
+        path = self.project_path()
+        with patch('tkinter.filedialog.asksaveasfilename', return_value=str(path)):
+            self.app.save_project()
+        self.assertEqual(load_project(path).schematic, changed)
+        self.app.undo()
+        self.assertEqual(self.app.session.state, before)
+        self.app.redo()
+        self.assertEqual(self.app.session.state, changed)
+        self.app.simulate()
+        self.wait_for_result()
+        self.assertAlmostEqual(self.app.session.result.node_voltages['out'], 8)
+
+    def test_rename_cancel_invalid_duplicate_and_noop_preserve_result_revision(self):
+        self.app.simulate()
+        self.wait_for_result()
+        before, result, revision = self.app._snapshot(), self.app.session.result, self.app.session.revision
+        self.app.selected = ('element', 'R1')
+        for text in (None, '', 'R2', 'x' * 257, 'R1'):
+            with self.subTest(text=text), patch('tkinter.simpledialog.askstring', return_value=text):
+                self.app.rename()
+            self.assertEqual(self.app._snapshot(), before)
+            self.assertIs(self.app.session.result, result)
+            self.assertEqual(self.app.session.revision, revision)
+            self.assertEqual(self.app.selected, ('element', 'R1'))
+
+    def test_rename_junction_ground_wire_and_owned_terminal(self):
+        self.app.selected = ('node', 'g')
+        with patch('tkinter.simpledialog.askstring', return_value='ground'):
+            self.app.rename()
+        self.assertEqual(self.app.session.state.document.circuit.reference_node, 'ground')
+        self.app.selected = ('wire', 'W1')
+        self.app.selected_bend = ('W1', 0)
+        with patch('tkinter.simpledialog.askstring', return_value='return: wire'):
+            self.app.rename()
+        self.assertIsNone(self.app.selected_bend)
+        self.assertTrue(self.app.canvas.find_withtag('entity:wire:return: wire'))
+        self.app._apply(self.app.session.state.place_component('R1', 320, 160, 0))
+        self.app.selected = ('terminal', next(iter(self.app.session.state.terminal_owners())))
+        with patch('tkinter.simpledialog.askstring') as dialog:
+            self.app.rename()
+            dialog.assert_not_called()
+
+    def test_rename_rejects_pending_worker_result(self):
+        result, future = solve_dc(self.app.session.state.compile().circuit), Future()
+        with patch.object(self.app.worker, 'submit', return_value=future):
+            self.app.simulate()
+        self.app.selected = ('element', 'R1')
+        with patch('tkinter.simpledialog.askstring', return_value='Rnew'):
+            self.app.rename()
+        future.set_result(result)
+        self.wait_for_result()
+        self.assertIsNone(self.app.session.result)
+        self.assertTrue(self.app.buttons['Export CSV'].instate(['disabled']))
+
     def test_csv_export_current_result_preserves_document_view_and_numbers(self):
         self.app.simulate()
         self.wait_for_result()

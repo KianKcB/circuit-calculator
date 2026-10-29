@@ -51,6 +51,8 @@ class CircuitEditor:
         actions.pack(fill='x')
         edit_actions = ttk.Frame(root, padding=(10, 0, 10, 8))
         edit_actions.pack(fill='x')
+        wire_actions = ttk.Frame(root, padding=(10, 0, 10, 8))
+        wire_actions.pack(fill='x')
         self.buttons = {}
         for label, command in (('New', self.new), ('Example', self.example),
                                ('Open Project', self.open_project), ('Save Project', self.save_project),
@@ -58,11 +60,12 @@ class CircuitEditor:
                                ('Export circuit', self.export),
                                ('Export CSV', self.export_results),
                                ('Undo', self.undo), ('Redo', self.redo),
-                               ('Edit value', self.edit_value), ('Rotate 90°', self.rotate), ('Delete', self.delete),
+                               ('Edit value', self.edit_value), ('Rename', self.rename), ('Rotate 90°', self.rotate), ('Delete', self.delete),
                                ('Reroute wire', self.reroute_wire), ('Straighten', self.straighten_wire),
                                ('Orthogonalize', self.orthogonalize),
                                ('Simulate DC', self.simulate)):
-            parent = edit_actions if label in ('Undo', 'Redo', 'Edit value', 'Rotate 90°', 'Delete', 'Reroute wire', 'Straighten', 'Orthogonalize', 'Simulate DC') else actions
+            parent = (wire_actions if label in ('Reroute wire', 'Straighten', 'Orthogonalize') else
+                      edit_actions if label in ('Undo', 'Redo', 'Edit value', 'Rename', 'Rotate 90°', 'Delete', 'Simulate DC') else actions)
             button = ttk.Button(parent, text=label, command=command)
             button.pack(side='left', padx=2)
             self.buttons[label] = button
@@ -70,8 +73,8 @@ class CircuitEditor:
                 button.configure(state='disabled')
         self.orthogonal = tk.BooleanVar(value=False)
         self.horizontal_first = True
-        ttk.Checkbutton(actions, text='Right-angle wires', variable=self.orthogonal,
-                        command=self.routing_style_changed).pack(side='right', padx=8)
+        ttk.Checkbutton(wire_actions, text='Right-angle wires', variable=self.orthogonal,
+                        command=self.routing_style_changed).pack(side='left', padx=8)
         for label, command in (('Fit circuit', self.fit_circuit), ('100%', lambda: self.set_zoom(1))):
             button = ttk.Button(header, text=label, command=command)
             button.pack(side='right', padx=3)
@@ -118,6 +121,7 @@ class CircuitEditor:
         self.canvas.bind('<Double-Button-1>', lambda event: self.edit_value())
         self.canvas.bind('<Key-r>', lambda event: self.rotate())
         self.canvas.bind('<Key-R>', lambda event: self.rotate())
+        self.canvas.bind('<F2>', lambda event: self.rename())
         self.canvas.bind('<BackSpace>', lambda event: self.remove_bend())
         self.canvas.bind('<Delete>', lambda event: self.delete())
         self.canvas.bind('<space>', self.toggle_route_order)
@@ -640,6 +644,24 @@ class CircuitEditor:
             self.draw()
             self._update_dirty()
 
+    def rename(self):
+        from tkinter import simpledialog
+        if not self.selected or self.selected[0] not in ('node', 'element', 'wire'):
+            self.status.set('Select a free junction, component body or wire to rename. Terminal identities are fixed.')
+            return
+        kind, name = self.selected
+        text = simpledialog.askstring('Rename', 'New name (case-sensitive):', initialvalue=name, parent=self.root)
+        if text is None:
+            return
+        try:
+            state = self.session.state.rename(kind, name, text)
+            self.selected = (kind, text)
+            self.drag_node = self.drag_element = self.drag_bend = self.selected_bend = None
+            self._apply(state)
+            self.status.set(f'Renamed {name} to {text}. Connections and orientation are preserved.')
+        except (TypeError, ValueError) as error:
+            self._error(error)
+
     def edit_value(self):
         from tkinter import simpledialog
         if not self.selected or self.selected[0] != 'element':
@@ -648,7 +670,8 @@ class CircuitEditor:
         element = next((e for e in self.session.state.document.circuit.elements if e.name == self.selected[1]), None)
         if element is None:
             return
-        text = simpledialog.askstring('Edit value', 'Value in base SI units:', initialvalue=str(value_of(element)), parent=self.root)
+        unit = 'ohms (> 0)' if type(element) is Resistor else 'volts, V(+) - V(-)' if type(element) is VoltageSource else 'amperes, positive from first to second terminal'
+        text = simpledialog.askstring('Edit value', f'{element.name}: value in {unit}:', initialvalue=str(value_of(element)), parent=self.root)
         if text is not None:
             try:
                 self._apply(self.session.state.change_value(element.name, Decimal(text)))

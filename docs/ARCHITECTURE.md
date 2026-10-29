@@ -30,6 +30,10 @@ ComponentPlacement values and a ViewState. Dedicated component terminal nodes ke
 their identity through movement/rotation; coordinates never determine connectivity.
 Legacy shared-junction elements acquire dedicated terminals and explicit wires
 on their first body move/rotation. See COMPONENT_EDITING.md for invariants.
+Name editing atomically replaces references within one identity namespace;
+component labels may change while dedicated terminal node IDs remain fixed.
+Junction renames update all incident endpoints and the ground identity in order.
+See IDENTITY_EDITING.md for collision rules and value-editor conventions.
 Wire owns an immutable tuple of Waypoint bends. Path points use node positions
 at the ends and fixed world-coordinate bends inside; only Wire.first/second
 participate in net resolution. Splitting explicitly creates/reuses a junction
