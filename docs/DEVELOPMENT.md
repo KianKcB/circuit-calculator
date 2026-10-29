@@ -14,7 +14,7 @@ The installable package requires Python >=3.11. Maintained CI targets CPython
 3.11-3.14 on Windows and Linux; other versions/platforms are not in the matrix.
 This replaces the previously unverified README Python 3.7 support claim. The
 installed flat imports and root launcher remain supported. The current
-local package version is 0.16.0; no release or registry publication has occurred.
+local package version is 0.17.0; no release or registry publication has occurred.
 The project's license is still undecided; no license grant is invented by packaging.
 
 For source development on Windows:
@@ -161,3 +161,7 @@ The opt-in runner assembles feature mixins from tests/gui_workflows/. Its initia
 is empty and module names omit test_, keeping regular discovery headless. Installed
 mode checks product origins first, then adds only the tests directory for helpers.
 Keep test IDs/order and base.py main-thread cleanup stable. See TK_TEST_LAYOUT.md.
+probe.py resolves two endpoint voltages and guards finite subtraction;
+probe_panel.py owns the lazy Tk pickers and transient revision-scoped choices.
+The controller passes accepted results through the existing refresh path.
+See VOLTAGE_PROBE.md for polarity and invalidation rules.

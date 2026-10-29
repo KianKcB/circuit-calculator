@@ -72,7 +72,7 @@ modules into sys.path. This needs a desktop display or an external Xvfb wrapper.
   literal Unicode/control identifiers, strict result validation, atomic preservation,
   path-alias protection, unchanged JSON plus optional CSV and CLI failures.
 - Opt-in Tk checks: `python -B scripts/check_gui.py -v` in a display session with
-  NumPy. Fifty-four tests exercise canvas hit targets/movement, creation/edit errors,
+  NumPy. The opt-in suite exercises canvas hit targets/movement, creation/edit errors,
   reference/delete/undo, async success/failure/stale results, zoom and export/open,
   graphical save/reopen/view state, cancellation, failed saves/loads, dirty-state
   restoration and stale completion across document boundaries; blank placement,
@@ -113,6 +113,22 @@ Expected reference answers are derived independently and must not be changed to
 accommodate an implementation error.
 
 ## Latest local run: 2026-10-29
+
+PROBE-1 passed **311 headless tests** on Python 3.11.9 and 3.14.6; the core-only
+run passed **283 with 28 expected skips**. Both interpreters passed the full
+**102-workflow** source suite, then a new minimum-window/keyboard test passed
+separately on both. Fresh offline installations on both passed **283 core plus
+28 skips / 311 DC-enabled / 103 installed Tk** and all origin, command, CSV,
+dependency and editable-import checks under pinned NumPy 2.4.6.
+Six pure/import/reference tests cover polarity, aliases, all three analytical
+reference choices, ordering, absent results, finite subtraction overflow and tiny
+values. Five GUI workflows cover real picker events, Swap/Clear, read-only state,
+duplicate display labels, history/new/open invalidation, failed/stale jobs, camera
+preservation, minimum-window controls/scrolling and result-text shortcuts.
+Native review verified picker selections, +4 V, reversed −4 V and Fit preservation.
+An additional real solved two-source circuit with finite +1e308/−1e308 node
+voltages correctly rejected the overflowing two-point difference on Python 3.11.
+The package is locally 0.17.0; schemas/dependencies/solver are unchanged.
 
 TESTS-1 mechanically moved the GUI suite into feature mixins. All **117 method
 ASTs** (98 tests, 19 helpers) match after normalizing only two workspace-root

@@ -1,9 +1,9 @@
 # Project status and continuation
 
-Date: 2026-10-29. This session began at `101a157` with a clean working tree and
+Date: 2026-10-29. This session began at `ad3f64b` with a clean working tree and
 no unrelated changes. The user has authorized staging
 and committing completed local batches; pushing remains a separate action.
-Package version is now 0.16.0;
+Package version is now 0.17.0;
 electrical document v1 and schematic-project v3 are separate formats. Project-v1/v2
 loading remains supported.
 Use README and DEVELOPMENT.md for current package paths/commands; historical
@@ -980,10 +980,36 @@ Core circuit/calculation/DC/schematic files and examples are unchanged from
 session base `101a157`. Native v1/project v3/CSV v1 and dependencies are unchanged.
 Hosted Linux execution remains unverified; no push/dispatch/publication occurred.
 
+## Batch PROBE-1: read-only two-point DC voltage measurement
+
+Base `ad3f64b`, no unrelated changes. New pure probe.py resolves exact endpoint
+identities through wire nets and computes V(A) minus V(B) from an accepted result.
+Finite inputs and subtraction are checked; range failures never become infinity
+or a fabricated zero. The lazy probe_panel.py contains two numbered endpoint
+pickers, Swap/Clear and read-only scrollable output. Numbered rows disambiguate
+equal human terminal/junction labels. Active probe tabs survive successful solves.
+Document revision changes clear choices; same-revision camera/selection changes
+preserve them. No graph/history writes or serialization changes; starting solves,
+failed jobs and rejected stale jobs cannot reuse old numbers.
+
+Baseline 305 headless tests passed before edits. Source runs now pass **311** on
+Python 3.11.9/3.14.6; core-only **283 passed plus 28 expected NumPy skips**.
+Both full source Tk runs passed **102** workflows; a later minimum-window and
+keyboard workflow passed separately on both. Fresh offline installations on both
+passed **283 core plus 28 skips / 311 DC-enabled / 103 installed Tk** under pinned
+NumPy 2.4.6, including origin/command/CSV/dependency/editable checks.
+Default 311-test discovery imports no Tk. Native review of the
+ignored v017 example copy verified endpoint pickers, analytical +4 V, Swap to −4 V
+and Fit preservation. Core model/formula/solver/schematic and examples are unchanged.
+An additional real two-source circuit solved with finite +1e308/−1e308 nodes;
+the probe correctly rejected their overflowing difference on Python 3.11.
+The package version is 0.17.0; native v1/project v3/CSV v1 and dependencies remain.
+PROBE-1 is locally VERIFIED. Hosted execution and publication remain unverified.
+
 ## Exact next action
 
-Review the four completed batches at the clean local commit checkpoint. Next
-implement a read-only two-point voltage probe with explicit A-minus-B convention,
-net-alias/reference invariance, stale-result and finite-difference range guards.
-Keep phase 6/7 in progress and do not infer unresolved individual wire currents.
+Review the completed PROBE-1 commit. Next specify optional schematic result
+annotations, including label placement,
+reference/sign conventions and stale-result behavior before implementation.
+Keep phases 6/7 in progress and never infer unresolved individual wire currents.
 Obtain hosted CI evidence after a user push; pushing is not authorized here.

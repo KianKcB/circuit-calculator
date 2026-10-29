@@ -134,6 +134,10 @@ class CircuitEditor:
             return view
         self.results = result_text(self.all_results_tab)
         self.inspection = result_text(self.inspection_tab)
+        from .probe_panel import VoltageProbePanel
+        self.probe_tab = ttk.Frame(self.result_tabs)
+        self.result_tabs.add(self.probe_tab, text='Voltage probe')
+        self.probe = VoltageProbePanel(self.probe_tab, self.session, key_command=self._global_key)
         ttk.Label(root, text='Wire terminal dots or junctions explicitly. Crossings and proximity do not connect. '
                   'Project saves include layout; circuit exports contain electrical connections only.',
                   padding=(14, 6), foreground='#526477', wraplength=1100).pack(fill='x')
@@ -199,6 +203,7 @@ class CircuitEditor:
 
     def _refresh_inspection(self):
         solving = self.future is not None and self.submitted_revision == self.session.revision
+        self.probe.refresh(solving=solving)
         text = selection_text(self.session.state, self.selected, self.session.result, solving=solving)
         if text != self._inspection_text:
             self.inspection.configure(state='normal')
@@ -1055,7 +1060,7 @@ class CircuitEditor:
                       f'KCL residual: {format_quantity(result.max_kcl_residual_amperes, "A", significant=3)}',
                       f'Power balance: {format_quantity(result.power_balance_watts, "W", significant=3)}']
             self._text('\n'.join(lines))
-            if self.selected is None:
+            if self.selected is None and self.result_tabs.select() != str(self.probe_tab):
                 self.result_tabs.select(self.all_results_tab)
             self._export_availability()
             self.status.set('DC solved. Results follow each component’s displayed terminal order.')

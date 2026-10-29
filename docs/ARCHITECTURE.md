@@ -1,5 +1,10 @@
 # Architecture
 
+Two-point DC probes use pure probe.py arithmetic and a lazy probe_panel.py UI.
+Only current EditorSession results are read. Endpoint choices are transient and
+clear on document revision changes; probes never change the graph or persistence.
+See [VOLTAGE_PROBE.md](VOLTAGE_PROBE.md).
+
 The local checkout is authoritative. Application implementations live in the
 `circuit_calculator/` package. Its calculations.py contains standalone formulas,
 cli.py owns command/interactive I/O, circuit.py owns immutable electrical data,

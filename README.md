@@ -46,7 +46,7 @@ progress and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for development commands
   Windows and Linux. Newer versions are outside the current test matrix.
 - The formula CLI and circuit model need only the standard library. DC solving
   adds the optional NumPy dependency.
-- Version 0.16.0 is currently a local development package. Installation commands
+- Version 0.17.0 is currently a local development package. Installation commands
   below use this checkout; it has not been published to a package registry.
 
 Open a terminal in the project directory and check that Python is available:
@@ -396,6 +396,11 @@ voltage/current/power from the current solve. Wires show net voltage; individual
 wire current is not calculated. Edits clear old values, while selection/camera
 changes preserve results. Both views scroll and support text selection/copy.
 See [RESULT_INSPECTION.md](docs/RESULT_INSPECTION.md) for the result-validity rules.
+The **Voltage probe** tab measures **V(A) − V(B)** between two chosen junctions
+or component terminals. **Swap A / B** reverses polarity; **Clear** resets the
+choices. Only current accepted results appear. Choices clear after document edits,
+Undo/Redo or opening a project, and remain transient when saving. See
+[VOLTAGE_PROBE.md](docs/VOLTAGE_PROBE.md) for range and freshness rules.
 **Find item** (Ctrl+F) filters components, junctions, terminals and wires by name
 or terminal label. **Show item** selects and centers a match without changing
 zoom, connectivity or current results. Matching names in different categories
