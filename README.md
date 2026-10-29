@@ -46,7 +46,7 @@ progress and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for development commands
   Windows and Linux. Newer versions are outside the current test matrix.
 - The formula CLI and circuit model need only the standard library. DC solving
   adds the optional NumPy dependency.
-- Version 0.13.0 is currently a local development package. Installation commands
+- Version 0.14.0 is currently a local development package. Installation commands
   below use this checkout; it has not been published to a package registry.
 
 Open a terminal in the project directory and check that Python is available:
@@ -385,6 +385,11 @@ updates the document; **Save Project** writes it to disk. Invalid entries stay
 open for correction, while Cancel/Escape keeps the original details. Enter adds
 a description line, Ctrl+Enter applies, and Ctrl+Tab leaves the multiline field.
 See [PROJECT_DETAILS.md](docs/PROJECT_DETAILS.md) for metadata/history rules.
+Canvas R/F and Ctrl+C/V/D, plus Undo/Redo and project file shortcuts, support
+Windows virtual letter keys under the observed non-Latin keyboard layout.
+Ctrl+Shift+Z also redoes an edit. Document shortcuts work in the read-only results
+panel; modal forms retain their own text controls. Alt/AltGr is ignored.
+See [SHORTCUTS.md](docs/SHORTCUTS.md) for scope and platform limits.
 See [WIRE_ROUTING.md](docs/WIRE_ROUTING.md) for routing, splitting and crossing rules.
 See [BEND_EDITING.md](docs/BEND_EDITING.md) for bend handles and right-angle routing.
 See [VIEWPORT.md](docs/VIEWPORT.md) for camera behavior. Scroll bounds now follow

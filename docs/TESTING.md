@@ -114,6 +114,15 @@ accommodate an implementation error.
 
 ## Latest local run: 2026-10-29
 
+KEYS-1 source runs passed **286 headless tests** and **85 Tk workflows** on
+Python 3.11.9/3.14.6. Core-only passed 260 with 26 expected NumPy skips. Five
+pure resolver tests cover Windows/non-Windows mapping, Shift/Caps Lock/AltGr,
+scope and lazy imports. Five GUI workflows exercise native virtual-key events,
+single file/history dispatch, results focus, pending-copy rotation and modal
+isolation. Fresh offline installs on both passed **260 core plus 26 skips / 286
+DC-enabled / 85 Tk** with pinned NumPy 2.4.6, plus origin/CLI/CSV/dependency/editable
+verification. No engine, schema or dependency change.
+
 GUI-9 passed **281 headless tests** on Python 3.11.9/3.14.6, **255 plus 26
 expected skips** in core-only mode, and **80 source Tk workflows** on both.
 Fresh offline wheel installations on both passed the same **255 core / 281

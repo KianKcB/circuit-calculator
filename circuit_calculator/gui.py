@@ -4,7 +4,6 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 import math
 from pathlib import Path
-import sys
 
 from circuit_calculator.circuit import Circuit, CurrentSource, Resistor, VoltageSource
 from circuit_calculator.circuit_io import CircuitDocument, load_document, save_document
@@ -15,6 +14,7 @@ from circuit_calculator.project_io import (SchematicProject, ViewState, load_pro
 from .canvas_renderer import render_schematic, render_component_preview
 from .viewport import clamp_zoom, fit_zoom, scroll_region, scroll_fraction
 from .quantities import parse_quantity, format_quantity
+from .shortcuts import shortcut_action
 
 
 class CircuitEditor:
@@ -126,26 +126,19 @@ class CircuitEditor:
         self.canvas.bind('<ButtonRelease-1>', self.release)
         self.canvas.bind('<Shift-Button-1>', self.insert_bend_at)
         self.canvas.bind('<Double-Button-1>', lambda event: self.edit_value())
-        self.canvas.bind('<Key-r>', lambda event: self.rotate())
-        self.canvas.bind('<Key-R>', lambda event: self.rotate())
         self.canvas.bind('<F2>', lambda event: self.rename())
-        self.canvas.bind('<Control-KeyPress>', self._clipboard_key)
+        self.canvas.bind('<KeyPress>', self._canvas_key)
         self.canvas.bind('<BackSpace>', lambda event: self.remove_bend())
         self.canvas.bind('<Delete>', lambda event: self.delete())
         self.canvas.bind('<space>', self.toggle_route_order)
-        self.canvas.bind('<Key-f>', lambda event: self.fit_circuit())
-        self.canvas.bind('<Key-F>', lambda event: self.fit_circuit())
         self.canvas.bind('<Configure>', self._canvas_resized)
         self.canvas.bind('<Motion>', self.route_motion)
         self.canvas.bind('<ButtonPress-2>', lambda event: self.canvas.scan_mark(event.x, event.y))
         self.canvas.bind('<B2-Motion>', self._pan)
         root.bind('<Escape>', lambda event: self.cancel())
-        root.bind('<Control-z>', lambda event: self.undo())
-        root.bind('<Control-y>', lambda event: self.redo())
+        root.bind('<Control-KeyPress>', self._global_key)
+        self.results.bind('<Control-KeyPress>', self._global_key)
         root.bind('<F5>', lambda event: self.simulate())
-        root.bind('<Control-s>', lambda event: self.save_project())
-        root.bind('<Control-Shift-S>', lambda event: self.save_project_as())
-        root.bind('<Control-o>', lambda event: self.open_project())
         self.draw()
         self.root.update_idletasks()
         if project is not None:
@@ -689,18 +682,18 @@ class CircuitEditor:
             Waypoint(*coordinates)
         return x, y
 
-    def _clipboard_key(self, event):
-        if event.state & 0x20008:  # X11 Mod1 or Tk's Windows Alt bit; ignore Alt/AltGr.
-            return None
-        key = event.keysym.lower()
-        if sys.platform == 'win32':
-            # Tk may report non-Latin keysyms for Windows virtual letter keys.
-            key = {67: 'c', 86: 'v', 68: 'd'}.get(event.keycode, key)
-        command = {'c': self.copy_selected, 'v': self.paste, 'd': self.duplicate}.get(key)
+    def _key_command(self, event, scope):
+        command = shortcut_action(event.keysym, event.keycode, event.state, scope=scope)
         if command is not None:
-            command()
+            getattr(self, command)()
             return 'break'
         return None
+
+    def _canvas_key(self, event):
+        return self._key_command(event, 'canvas')
+
+    def _global_key(self, event):
+        return self._key_command(event, 'application')
 
     def copy_selected(self):
         if not self.selected or self.selected[0] != 'element':

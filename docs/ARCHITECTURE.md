@@ -51,6 +51,10 @@ the lazy Tk form and validates through CircuitDocument. On return the controller
 applies the fields to the current state, not a saved pre-dialog graph. Metadata
 edits use normal one-step history and conservative result invalidation; unchanged
 or canceled details preserve results. See PROJECT_DETAILS.md.
+shortcuts.py is a pure resolver of fixed command names for canvas/application
+scope, modifiers and platform key fields. GUI handlers stop propagation only for
+handled commands. Read-only results share document shortcuts; separate modal
+toplevels retain local text behavior. See SHORTCUTS.md.
 Wire owns an immutable tuple of Waypoint bends. Path points use node positions
 at the ends and fixed world-coordinate bends inside; only Wire.first/second
 participate in net resolution. Splitting explicitly creates/reuses a junction

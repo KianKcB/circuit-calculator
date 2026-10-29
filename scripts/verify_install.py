@@ -48,7 +48,7 @@ for name in ('circuit_calculator', 'circuit_calculator.calculations',
              'circuit_calculator.project_io', 'circuit_calculator._document_io',
              'circuit_calculator.canvas_renderer', 'circuit_calculator.viewport',
              'circuit_calculator.results_io', 'circuit_calculator.quantities',
-             'circuit_calculator.editor_dialogs'):
+             'circuit_calculator.editor_dialogs', 'circuit_calculator.shortcuts'):
     spec = importlib.util.find_spec(name)
     if spec is None or not Path(spec.origin).resolve().is_relative_to(environment):
         raise RuntimeError('Module did not come from installed environment: ' + name)

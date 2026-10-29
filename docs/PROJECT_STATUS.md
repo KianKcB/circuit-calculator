@@ -3,7 +3,7 @@
 Date: 2026-10-29. GUI-9 began at `8ca5165` with a clean working tree and
 no unrelated changes. The user has authorized staging
 and committing completed local batches; pushing remains a separate action.
-Package version is now 0.13.0;
+Package version is now 0.14.0;
 electrical document v1 and schematic-project v3 are separate formats. Project-v1/v2
 loading remains supported.
 Use README and DEVELOPMENT.md for current package paths/commands; historical
@@ -865,14 +865,32 @@ helper path passed. Complete field editing/validation/newlines/persistence are
 covered by the real Tk harness above. The fitted review copy was saved at
 `.build-check/2026-10-29-v013-review.ccproj.json`; no source example was changed.
 
-GUI-9 is VERIFIED locally and ready for its commit. Package 0.13.0, unchanged
+GUI-9 was committed as `101a157`. Package 0.13.0, unchanged
 native v1/project v3/CSV v1 and dependency boundaries. The engine/model/formula
 files and source examples are unchanged from session base `841d800`. Hosted Linux
 CI remains configured/unverified; no push, CI dispatch or publication occurred.
 
+## Batch KEYS-1: keyboard-layout and scope consistency
+
+Base `101a157`, clean tree, no unrelated changes. shortcuts.py maps only allowed
+canvas/application commands, using Windows virtual letter codes or Latin symbols
+elsewhere. R/F and document Z/Y/S/O now share clipboard C/V/D dispatch rules;
+Ctrl+Shift+Z is an additional Redo. Alt/AltGr is excluded using both observed
+modifier masks. Handled commands stop propagation. Global commands work while
+read-only results have focus; unhandled selection/copy behavior and separate
+modal text controls retain native Tk handling. No schema, dependency or engine
+changes. Platform limits and acceptance criteria are in SHORTCUTS.md.
+
+Five new pure mapping/import tests and five Tk workflows cover scopes, modifiers,
+virtual keys, rotate/paste, single-dispatch file/history actions, results focus
+and modal isolation. Both interpreters passed **286 headless tests**, **85 source
+Tk workflows**, and **260 core tests with 26 expected NumPy skips**. Fresh offline
+wheel checks on both passed the same **260 core / 286 DC-enabled / 85 installed
+Tk** counts, plus origin/CLI/CSV/dependency/editable checks. Pinned NumPy remains
+2.4.6. KEYS-1 is VERIFIED locally; hosted Linux remains unverified. No push.
+
 ## Exact next action
 
-Review the four completed local batches at the clean commit checkpoint. Next address
-remaining R/F and global Ctrl shortcut keyboard-layout dependence, then scope
-explicit component-result inspection. Keep full phase 6 in progress.
+Commit KEYS-1, then implement explicit component-result
+inspection with orientation/current-result tests. Keep full phase 6 in progress.
 Obtain hosted CI evidence after a user push; pushing is not authorized here.

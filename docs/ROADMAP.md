@@ -24,7 +24,7 @@ direction; research items require a separate feasibility decision.
 | 15 SPICE interoperability | NOT STARTED | Selected syntax and external benchmark suite; backend/version/license review first. Reject unsupported directives and document model differences. |
 | 16 Specialized analysis | DEFERRED | Small-signal, noise, pole-zero, distortion, multiport, thermal and transmission-line features each require a separate mathematical specification and references. |
 | 17 Research extensions | DEFERRED | Mixed-signal, RF/distributed, multiphysics, fitting, optimization, plugins and external APIs; feasibility and maintenance assessment before approval. |
-| 18 Distribution/maintenance | IN PROGRESS | Local package 0.13.0, project v3/backward loading and CSV results v1. Isolated installed Tk checks and Linux display CI configured; hosted evidence pending. Bounded grid timing/accuracy script available. Publishing, licensing, releases and broader benchmarks remain planned. |
+| 18 Distribution/maintenance | IN PROGRESS | Local package 0.14.0, project v3/backward loading and CSV results v1. Isolated installed Tk checks and Linux display CI configured; hosted evidence pending. Bounded grid timing/accuracy script available. Publishing, licensing, releases and broader benchmarks remain planned. |
 
 ## Next reviewable batches
 
