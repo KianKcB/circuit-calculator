@@ -114,6 +114,16 @@ accommodate an implementation error.
 
 ## Latest local run: 2026-10-29
 
+GUI-8 passed **264 headless tests** and **69 source Tk workflows** on both local
+interpreters. The core-only run passed 239 with 25 expected NumPy skips. Fresh
+offline installations on both passed the same 239 core/264 DC/69 installed Tk
+counts with pinned NumPy 2.4.6, plus import/entry-point/CSV/dependency/editable checks.
+Eight new headless tests cover R/V/I snapshot/identity/geometry/limit/history/file
+invariants and an independent 6 V wired-copy divider. Nine Tk additions verify
+placement/rotation/cancellation, clipboard isolation, save/undo, real keyboard
+bindings and rejection of stale worker results. Preview items lack graph hit tags
+and do not change scroll bounds or numerical revision.
+
 GUI-7 source checks passed **256 headless tests** and **60 Tk workflows** on
 Python 3.11.9 and 3.14.6. Core-only mode passed 232 with 24 expected NumPy skips.
 Eight identity tests and six Tk workflows were added, including namespace/ground/

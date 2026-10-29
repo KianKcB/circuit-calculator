@@ -1,6 +1,7 @@
 """Tk schematic DC editor. Tk is imported only when the GUI is launched."""
 
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from decimal import Decimal, InvalidOperation
 import math
 from pathlib import Path
@@ -11,7 +12,7 @@ from circuit_calculator.schematic import (EditorSession, Position, Schematic, Wi
                        component, divider_example, terminals, value_of, orthogonal_bends)
 from circuit_calculator.project_io import (SchematicProject, ViewState, load_project,
                                           save_project as write_project)
-from .canvas_renderer import render_schematic
+from .canvas_renderer import render_schematic, render_component_preview
 from .viewport import clamp_zoom, fit_zoom, scroll_region, scroll_fraction
 
 
@@ -32,6 +33,9 @@ class CircuitEditor:
         self.drag_bend = self.selected_bend = None
         self.drag_offset = (0, 0)
         self.drag_origin = (0, 0)
+        self.clipboard = None
+        self.paste_position = None
+        self.paste_template = None
         self.zoom = 1.0
         self._canvas_size = None
         self._initial_view = project.view if project is not None else None
@@ -60,12 +64,13 @@ class CircuitEditor:
                                ('Export circuit', self.export),
                                ('Export CSV', self.export_results),
                                ('Undo', self.undo), ('Redo', self.redo),
+                               ('Copy', self.copy_selected), ('Paste', self.paste), ('Duplicate', self.duplicate),
                                ('Edit value', self.edit_value), ('Rename', self.rename), ('Rotate 90°', self.rotate), ('Delete', self.delete),
                                ('Reroute wire', self.reroute_wire), ('Straighten', self.straighten_wire),
                                ('Orthogonalize', self.orthogonalize),
                                ('Simulate DC', self.simulate)):
             parent = (wire_actions if label in ('Reroute wire', 'Straighten', 'Orthogonalize') else
-                      edit_actions if label in ('Undo', 'Redo', 'Edit value', 'Rename', 'Rotate 90°', 'Delete', 'Simulate DC') else actions)
+                      edit_actions if label in ('Undo', 'Redo', 'Copy', 'Paste', 'Duplicate', 'Edit value', 'Rename', 'Rotate 90°', 'Delete', 'Simulate DC') else actions)
             button = ttk.Button(parent, text=label, command=command)
             button.pack(side='left', padx=2)
             self.buttons[label] = button
@@ -122,6 +127,9 @@ class CircuitEditor:
         self.canvas.bind('<Key-r>', lambda event: self.rotate())
         self.canvas.bind('<Key-R>', lambda event: self.rotate())
         self.canvas.bind('<F2>', lambda event: self.rename())
+        self.canvas.bind('<Control-c>', lambda event: self.copy_selected())
+        self.canvas.bind('<Control-v>', lambda event: self.paste())
+        self.canvas.bind('<Control-d>', lambda event: self.duplicate())
         self.canvas.bind('<BackSpace>', lambda event: self.remove_bend())
         self.canvas.bind('<Delete>', lambda event: self.delete())
         self.canvas.bind('<space>', self.toggle_route_order)
@@ -184,8 +192,11 @@ class CircuitEditor:
     def change_mode(self):
         self.mode = self.tool.get()
         self._clear_route()
+        self.paste_position = None
+        self.paste_template = self.clipboard if self.mode == 'paste' else None
         self.drag_node = self.drag_element = self.drag_bend = self.selected_bend = None
-        self.status.set('Click empty space to place a junction.' if self.mode == 'node' else
+        self.status.set('Click to place an unconnected copy. R rotates the preview; Escape cancels. Wire its terminals before analysis.' if self.mode == 'paste' else
+                        'Click empty space to place a junction.' if self.mode == 'node' else
                         'Select a terminal or junction for the zero-volt reference.' if self.mode == 'ground' else
                         'Drag a body, junction or selected wire bend. Shift-click a selected wire to add a bend; Delete removes a selected bend.' if self.mode == 'select' else
                         'Click a dot, empty space for bends, then another dot. Esc cancels; Backspace removes a bend.' if self.mode == 'wire' else
@@ -203,6 +214,8 @@ class CircuitEditor:
         self.session.apply(state)
         if previous != self.session.revision:
             self._clear_route()
+            if self.mode == 'paste':
+                self.cancel()
             self._text('Results cleared after edit.\nRun Simulate DC to analyze the current circuit.')
             self._export_availability()
         self.draw()
@@ -241,6 +254,15 @@ class CircuitEditor:
         self.route_bends = []
 
     def route_motion(self, event):
+        if self.mode == 'paste' and self.paste_template is not None:
+            try:
+                self.paste_position = self._paste_point(event)
+                self.draw()
+            except (ValueError, TypeError) as error:
+                self.paste_position = None
+                self._error(error)
+                self.draw()
+            return
         if self.mode == 'wire' and self.pending is not None:
             self._preview_route(event)
 
@@ -382,7 +404,14 @@ class CircuitEditor:
         self.canvas.focus_set()
         hit = self._hit(event)
         try:
-            if self.mode == 'split':
+            if self.mode == 'paste':
+                state = self.session.state.paste_component(self.paste_template, *self._paste_point(event))
+                name = state.document.circuit.elements[-1].name
+                self.cancel()
+                self.selected = ('element', name)
+                self._apply(state)
+                self.status.set(f'Placed unconnected copy {name}. Wire its terminals before analysis.')
+            elif self.mode == 'split':
                 self.split_at(event, hit)
             elif self.mode == 'wire' and self.pending is not None and not hit:
                 if len(self.route_bends) >= MAX_BENDS:
@@ -541,6 +570,8 @@ class CircuitEditor:
             self._content_bounds = bounds
             self._set_scroll_region()
         self._preview_route()
+        if self.mode == 'paste' and self.paste_template is not None and self.paste_position is not None:
+            render_component_preview(self.canvas, self.paste_template, *self.paste_position, self.zoom)
 
     def change_zoom(self, factor):
         try:
@@ -635,6 +666,8 @@ class CircuitEditor:
 
     def _history_changed(self, before):
         if self.session.revision != before:
+            if self.mode == 'paste':
+                self.cancel()
             self.selected = self.pending = None
             self._clear_route()
             self.drag_node = self.drag_element = None
@@ -643,6 +676,49 @@ class CircuitEditor:
             self._export_availability()
             self.draw()
             self._update_dirty()
+
+    def _paste_point(self, event):
+        x = round(self.canvas.canvasx(event.x) / self.zoom / 20) * 20
+        y = round(self.canvas.canvasy(event.y) / self.zoom / 20) * 20
+        # Validate the full terminal geometry, not only the preview center.
+        from .schematic import ComponentPlacement
+        placement = ComponentPlacement('preview', x, y, self.paste_template.rotation)
+        for coordinates in placement.terminal_coordinates():
+            Waypoint(*coordinates)
+        return x, y
+
+    def copy_selected(self):
+        if not self.selected or self.selected[0] != 'element':
+            self.status.set('Select a component body to copy. Wires and junctions are not copied.')
+            return
+        try:
+            self.clipboard = self.session.state.copy_component(self.selected[1])
+            self.status.set('Component copied. Choose Paste, then click to place an unconnected copy.')
+        except (TypeError, ValueError) as error:
+            self._error(error)
+
+    def paste(self):
+        if self.clipboard is None:
+            self.status.set('Copy a component body first. The in-app clipboard is empty.')
+            return
+        self.tool.set('paste')
+        self.change_mode()
+        self.canvas.focus_set()
+
+    def duplicate(self):
+        if not self.selected or self.selected[0] != 'element':
+            self.status.set('Select a component body to duplicate.')
+            return
+        try:
+            state = self.session.state
+            placement = state.component_placement(self.selected[1])
+            copied = state.duplicate_component(self.selected[1], placement.x + 40, placement.y + 40)
+            self.cancel()
+            self.selected = ('element', copied.document.circuit.elements[-1].name)
+            self._apply(copied)
+            self.status.set('Created an unconnected duplicate. Move it and wire its terminals before analysis.')
+        except (TypeError, ValueError) as error:
+            self._error(error)
 
     def rename(self):
         from tkinter import simpledialog
@@ -679,6 +755,20 @@ class CircuitEditor:
                 self._error(error)
 
     def rotate(self):
+        if self.mode == 'paste' and self.paste_template is not None:
+            self.paste_template = replace(self.paste_template, rotation=(self.paste_template.rotation + 90) % 360)
+            # A previously valid center may put rotated terminals out of bounds.
+            if self.paste_position is not None:
+                from .schematic import ComponentPlacement
+                try:
+                    placement = ComponentPlacement('preview', *self.paste_position, self.paste_template.rotation)
+                    for coordinates in placement.terminal_coordinates():
+                        Waypoint(*coordinates)
+                except (ValueError, TypeError):
+                    self.paste_position = None
+            self.draw()
+            self.status.set('Rotated the pending copy. Click to place; Escape cancels. Source and clipboard are unchanged.')
+            return
         if not self.selected or self.selected[0] != 'element':
             self.status.set('Select a component body to rotate it.')
             return
@@ -723,6 +813,7 @@ class CircuitEditor:
         self.project_path = Path(path).resolve() if path is not None else None
         self.selected = self.pending = self.drag_node = self.drag_element = None
         self.drag_bend = self.selected_bend = None
+        self.paste_position = self.paste_template = None
         self._clear_route()
         self.tool.set('select')
         self.mode = 'select'

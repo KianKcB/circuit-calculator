@@ -3,7 +3,7 @@
 import math
 
 from .circuit import Resistor, VoltageSource
-from .schematic import terminals, value_of
+from .schematic import terminals, value_of, ComponentPlacement
 
 
 def render_schematic(canvas, state, zoom, *, selected=None, selected_bend=None, pending=None, mode='select', preview=None):
@@ -94,3 +94,24 @@ def render_schematic(canvas, state, zoom, *, selected=None, selected_bend=None, 
                 canvas.create_rectangle(x - 5, y - 5, x + 5, y + 5, fill=fill, outline='#b25b10', width=2,
                                         tags=(f'entity:bend:{wire.name}', f'bend-index:{index}'))
     return content_region
+
+
+def render_component_preview(canvas, template, x, y, zoom):
+    """Decorative placement outline; never has electrical hit/content tags."""
+    placement = ComponentPlacement('preview', x, y, template.rotation)
+    first, second = placement.terminal_coordinates()
+    points = tuple(v * zoom for point in (first, second) for v in point)
+    tag = 'paste-preview'
+    color = '#b25b10'
+    canvas.create_line(*points, fill=color, width=2, dash=(4, 3), tags=tag)
+    cx, cy = x * zoom, y * zoom
+    canvas.create_rectangle(cx - 22 * zoom, cy - 22 * zoom, cx + 22 * zoom, cy + 22 * zoom,
+                            outline=color, width=2, dash=(4, 3), fill='#fff4e5', tags=tag)
+    labels = ('a', 'b') if template.kind == 'resistor' else ('+', '−') if template.kind == 'voltage' else ('from', 'to')
+    for point, label in zip((first, second), labels):
+        px, py = (v * zoom for v in point)
+        canvas.create_oval(px - 5, py - 5, px + 5, py + 5, fill='white', outline=color, tags=tag)
+        canvas.create_text(px + 10, py - 12, text=label, fill=color, anchor='w', tags=tag)
+    unit = {'resistor': 'ohm', 'voltage': 'V', 'current': 'A'}[template.kind]
+    canvas.create_text(cx, cy + 32 * zoom, text=f'Paste {template.kind}: {template.value:g} {unit}',
+                       fill=color, anchor='n', tags=tag)

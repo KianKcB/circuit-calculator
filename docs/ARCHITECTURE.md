@@ -34,6 +34,12 @@ Name editing atomically replaces references within one identity namespace;
 component labels may change while dedicated terminal node IDs remain fixed.
 Junction renames update all incident endpoints and the ground identity in order.
 See IDENTITY_EDITING.md for collision rules and value-editor conventions.
+ComponentTemplate is a validated immutable kind/value/rotation clipboard snapshot
+without node IDs. Paste allocates a fresh placed component and terminal IDs;
+duplicate composes copy/paste without inheriting wiring or the reference. Pending
+placement and preview rotation stay in the GUI controller outside history/files.
+The renderer draws preview decoration without electrical hit/content tags.
+See COMPONENT_COPY.md for clipboard and cancellation semantics.
 Wire owns an immutable tuple of Waypoint bends. Path points use node positions
 at the ends and fixed world-coordinate bends inside; only Wire.first/second
 participate in net resolution. Splitting explicitly creates/reuses a junction

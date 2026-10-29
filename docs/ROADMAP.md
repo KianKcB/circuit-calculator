@@ -20,19 +20,19 @@ direction; research items require a separate feasibility decision.
 | 11 Nonlinear | NOT STARTED | Diodes then selected semiconductor models, Newton convergence safeguards; decide native vs established backend first. Explicit educational vs physical model fidelity. |
 | 12 Advanced analyses | NOT STARTED | Sweeps, sensitivity, Monte Carlo, optimization, power efficiency and reports; depends on relevant validated engine. Deterministic seeds and independent sensitivity checks. |
 | 13 Subcircuits/libraries | NOT STARTED | Scoped names, terminal mapping, parameterized hierarchy and symbols; depends on persistence. Reject recursion and validate flattened equivalence. |
-| 14 GUI maturity | IN PROGRESS | Bounded Undo/Redo, stale-result protection, graphical project saves, explicit polyline routing and unsaved-change protection implemented. Copy/paste, richer routing, labels, probes, accessibility, autosave and multiple projects remain planned. |
+| 14 GUI maturity | IN PROGRESS | Bounded Undo/Redo, stale-result protection, graphical project saves, explicit routing, unsaved-change protection and single-component in-app Copy/Paste/Duplicate implemented. Multi-selection, richer routing, probes, accessibility, autosave and multiple projects remain planned. |
 | 15 SPICE interoperability | NOT STARTED | Selected syntax and external benchmark suite; backend/version/license review first. Reject unsupported directives and document model differences. |
 | 16 Specialized analysis | DEFERRED | Small-signal, noise, pole-zero, distortion, multiport, thermal and transmission-line features each require a separate mathematical specification and references. |
 | 17 Research extensions | DEFERRED | Mixed-signal, RF/distributed, multiphysics, fitting, optimization, plugins and external APIs; feasibility and maintenance assessment before approval. |
-| 18 Distribution/maintenance | IN PROGRESS | Local package 0.10.0, project v3/backward loading and CSV results v1. Isolated installed Tk checks and Linux display CI configured; hosted evidence pending. Bounded grid timing/accuracy script available. Publishing, licensing, releases and broader benchmarks remain planned. |
+| 18 Distribution/maintenance | IN PROGRESS | Local package 0.11.0, project v3/backward loading and CSV results v1. Isolated installed Tk checks and Linux display CI configured; hosted evidence pending. Bounded grid timing/accuracy script available. Publishing, licensing, releases and broader benchmarks remain planned. |
 
 ## Next reviewable batches
 
 1. Inspect hosted CI evidence after the next user push; local package checks are complete.
 2. Review the committed GUI-5, GUI-6, RESULTS-1 and CI-GUI batches (0087d36,
    199bb16, 03abb65, 84a8bfd) and the bounded grid-validation batch.
-3. GUI-7 adds scoped name/value editing (IDENTITY_EDITING.md). Next implement
-   isolated component duplication with terminal ownership/history/file tests. Keep the
+3. GUI-7/8 add scoped names/values and isolated component copying. Next scope is
+   SI-prefix display/input and project metadata editing, with exact-value tests. Keep the
    full phase-6 milestone in progress; obtain hosted CI evidence after a user push.
 
 PERSIST-1/GUI-1 are committed as c4a13dd and REORG-1 as 992fbac. GUI-2 project

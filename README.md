@@ -46,7 +46,7 @@ progress and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for development commands
   Windows and Linux. Newer versions are outside the current test matrix.
 - The formula CLI and circuit model need only the standard library. DC solving
   adds the optional NumPy dependency.
-- Version 0.10.0 is currently a local development package. Installation commands
+- Version 0.11.0 is currently a local development package. Installation commands
   below use this checkout; it has not been published to a package registry.
 
 Open a terminal in the project directory and check that Python is available:
@@ -368,6 +368,12 @@ and persistent orthogonal constraints remain planned.
 The electrical model and solver stay independent of Tk and layout coordinates.
 See [COMPONENT_EDITING.md](docs/COMPONENT_EDITING.md) for geometry and migration rules.
 See [IDENTITY_EDITING.md](docs/IDENTITY_EDITING.md) for name, unit and history rules.
+**Copy** captures a selected component's value and orientation in the in-app
+clipboard. **Paste** then click places an unconnected copy; R rotates its preview,
+and Escape cancels. **Duplicate** places a copy 40 units right and down. Canvas
+shortcuts are Ctrl+C/Ctrl+V/Ctrl+D. Each copy has fresh terminals and a fresh name;
+wire it explicitly before simulation. Source wires and ground are not copied.
+See [COMPONENT_COPY.md](docs/COMPONENT_COPY.md) for snapshot/history rules.
 See [WIRE_ROUTING.md](docs/WIRE_ROUTING.md) for routing, splitting and crossing rules.
 See [BEND_EDITING.md](docs/BEND_EDITING.md) for bend handles and right-angle routing.
 See [VIEWPORT.md](docs/VIEWPORT.md) for camera behavior. Scroll bounds now follow
@@ -378,7 +384,7 @@ show a different view, while electrical data and layout coordinates are preserve
 
 The following are planned ideas and are **not implemented**:
 
-- Copy/paste, obstacle-aware routing, result annotations and richer schematic editing.
+- Multi-component/OS-clipboard copy/paste, obstacle-aware routing, result annotations and richer schematic editing.
 - Extended DC analysis with controlled sources and equivalent-port calculations.
 - RC and RLC circuit analysis.
 

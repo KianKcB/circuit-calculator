@@ -1,9 +1,9 @@
 # Project status and continuation
 
-Date: 2026-10-29. GUI-7 began at `841d800` with a clean working tree and
+Date: 2026-10-29. GUI-8 began at `4048f91` with a clean working tree and
 no unrelated changes. The user has authorized staging
 and committing completed local batches; pushing remains a separate action.
-Package version is now 0.10.0;
+Package version is now 0.11.0;
 electrical document v1 and schematic-project v3 are separate formats. Project-v1/v2
 loading remains supported.
 Use README and DEVELOPMENT.md for current package paths/commands; historical
@@ -758,8 +758,37 @@ and supplied from ignored `.build-check/wheelhouse` using PIP_NO_INDEX and
 PIP_FIND_LINKS. The isolated sdist/wheel build and fresh environments then passed
 offline; no dependency pins were changed. Hosted Linux execution remains pending.
 
+## Batch GUI-8: component clipboard and duplication
+
+ComponentTemplate snapshots only validated R/V/I kind/value/right-angle rotation.
+Copy preserves source graph/results; Paste/duplicate allocate collision-free
+component names and dedicated terminals without copying wires/reference. Legacy
+symbols capture the existing nearest right-angle placement orientation. Bounds
+and resource validation are atomic. Every committed copy is one history entry;
+ordinary native/project persistence handles the new graph without schema changes.
+
+GUI Copy/Paste/Duplicate and canvas Ctrl+C/V/D are implemented. Paste has a snapped
+decorative preview, R rotates only the pending copy, and Escape/tool/history/open
+cancels it. Preview and clipboard never change revision, scroll bounds or results.
+The in-app snapshot survives source deletion/edits/document opening. OS clipboard,
+multi-component selection and copying wires/subcircuits remain outside scope.
+Disconnected copies require explicit wiring before DC analysis. COMPONENT_COPY.md
+records identity, orientation, compatibility and acceptance criteria.
+
+Eight headless tests cover all kinds/rotations, signed/zero sources, adversarial
+ID collisions, immutable snapshots, rollback, history and exact project recovery.
+An independently derived parallel-lower-resistor divider gives **6 V**, **3 mA**
+per lower branch and **-0.072 W** source power after explicitly wiring the copy.
+Source checks passed **264 headless tests** on Python 3.11.9/3.14.6 and **69 Tk
+workflows** on both. Core-only mode passed **239 with 25 expected NumPy skips**.
+Fresh isolated builds and both interpreters' installed checks passed **239 core
+plus 25 expected skips**, **264 DC tests**, **69 installed Tk workflows**, and
+command/CSV/origin/dependency/editable checks. They used the same pinned cached
+wheels offline. One interrupted 3.14 checker was rerun from a new environment to
+completion. No solver/model/formula changes, dependency changes or pushes.
+
 ## Exact next action
 
-GUI-7 is verified locally and ready for its commit. Next implement isolated component
-duplication with endpoint/history/file tests. Keep full phase 6 in progress.
+GUI-8 is verified locally and ready for its commit. Next add SI-prefix display/input and project
+metadata editing in separate scoped batches. Keep full phase 6 in progress.
 Obtain hosted CI evidence after a user push; pushing is not authorized here.

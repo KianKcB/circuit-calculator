@@ -152,6 +152,19 @@ def _next_id(prefix, used):
 
 
 @dataclass(frozen=True)
+class ComponentTemplate:
+    """In-app clipboard value; deliberately owns no electrical endpoints."""
+    kind: str
+    value: float
+    rotation: int = 0
+
+    def __post_init__(self):
+        element = component(self.kind, 'copy', 'first', 'second', self.value)
+        ComponentPlacement('copy', 0, 0, self.rotation)
+        object.__setattr__(self, 'value', value_of(element))
+
+
+@dataclass(frozen=True)
 class Schematic:
     document: CircuitDocument
     positions: tuple
@@ -293,6 +306,23 @@ class Schematic:
         return Schematic(self._circuit(nodes=(*nodes, first, second),
                          elements=(*self.document.circuit.elements, element)),
                          (*self.positions, *points), self.wires, (*self.placements, placement))
+
+    def copy_component(self, name):
+        element = next((e for e in self.document.circuit.elements if e.name == name), None)
+        if element is None:
+            raise ValueError('Select an existing component body to copy')
+        kind = {Resistor: 'resistor', VoltageSource: 'voltage', CurrentSource: 'current'}[type(element)]
+        return ComponentTemplate(kind, value_of(element), self.component_placement(name).rotation)
+
+    def paste_component(self, template, x, y):
+        if type(template) is not ComponentTemplate:
+            raise TypeError('Expected a ComponentTemplate')
+        prefix = {'resistor': 'R', 'voltage': 'V', 'current': 'I'}[template.kind]
+        name = _next_id(prefix, {e.name for e in self.document.circuit.elements})
+        return self.add_placed_component(template.kind, name, x, y, template.value, template.rotation)
+
+    def duplicate_component(self, name, x, y):
+        return self.paste_component(self.copy_component(name), x, y)
 
     def place_component(self, name, x, y, rotation):
         existing = next((e for e in self.document.circuit.elements if e.name == name), None)
