@@ -28,10 +28,11 @@ direction; research items require a separate feasibility decision.
 
 ## Next reviewable batches
 
-1. Review KEYS-1 (`4a632ad`), RESULTS-2 (`7a97197`) and GUI-10; verification is
-   recorded in PROJECT_STATUS.md. Full GUI maturity remains in progress.
-2. Organize the opt-in Tk suite by feature, retaining the runner, names/order,
-   headless discovery and installed isolation. See TK_TEST_LAYOUT.md.
+1. Review KEYS-1 (`4a632ad`), RESULTS-2 (`7a97197`), GUI-10 (`78a97ce`) and
+   TESTS-1. Exact verification is recorded in PROJECT_STATUS.md.
+2. Next implement a read-only two-point voltage probe from current accepted
+   results, with explicit polarity, alias/reference/stale-result and range tests.
+   GUI maturity and visualization remain in progress; annotations/plots are planned.
 3. Inspect hosted CI evidence after a user push; local success is not hosted proof.
 
 PERSIST-1/GUI-1 are committed as c4a13dd and REORG-1 as 992fbac. GUI-2 project

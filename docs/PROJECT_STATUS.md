@@ -921,6 +921,8 @@ is VERIFIED locally. No model/solver/math/schema/dependency changes or push.
 
 ## Batch GUI-10: item search and camera reveal
 
+Committed as `78a97ce`.
+
 navigation.py builds immutable exact identities for components, free/owned nodes
 and wires; filters plain Unicode case-folded names/labels with 256-character bounds;
 and computes reveal points from saved geometry. Wire points use half path length,
@@ -945,9 +947,43 @@ NumPy skips**. Fresh offline installs on both passed **278 core / 305 DC-enabled
 98 installed Tk** and all import/CLI/CSV/dependency/editable checks with NumPy
 2.4.6. GUI-10 is VERIFIED locally; no push or hosted CI claim.
 
+## Batch TESTS-1: feature-organized opt-in Tk workflows
+
+Base `78a97ce`, no unrelated changes. scripts/check_gui.py now retains only origin/
+path policy, mixin assembly and unittest entry point. tests/gui_workflows/ separates
+clipboard, documents, editing, navigation, results/quantities, routing, shortcuts
+and viewport/layout. Shared lifecycle/fixtures live in base.py; the initializer
+loads no GUI code and filenames deliberately do not match headless discovery.
+Source archives include helper Python/README files; application wheels do not.
+
+Mechanical normalized-AST comparison preserved **all 117 methods**: **98 tests**
+and **19 helpers**. The only method-body adjustment replaces two script-relative
+root expressions with shared REPO_ROOT anchored to the helper path. No assertion,
+test name, order or main-thread cleanup changed. The original and AST proof are
+retained in ignored .build-check/tests-1-original-check_gui.py and tests-1-ast-proof.json.
+Core-only ran 305 tests (278 passed, 27 expected skips). Both interpreters passed
+**305 headless / 98 source Tk** checks. Fresh offline installations on both passed
+**278 core plus 27 skips / 305 DC-enabled / 98 installed Tk**, with origin,
+CLI/CSV/dependency/editable verification. Runtime test names/order/count exactly
+match the original; default 305-test discovery imports no Tk. An extracted sdist
+also passed the complete **98-workflow** GUI suite on Python 3.11, including the
+new workspace-root anchors and packaged helpers/README. Application version stays
+0.16.0 and application source is unchanged in this batch. TESTS-1 is VERIFIED.
+
+Native visual/keyboard review of an ignored example copy verified Ctrl+F, numeric
+filtering, exact R1 reveal, current 4 V / 4 mA / 16 mW inspection, R rotation and
+immediate stale-value clearing, Ctrl+Z restore, plain F Fit, F5 recomputation,
+wire net/reference voltage with no claimed wire current, and Ctrl+S Save. The
+fitted review remains open at .build-check/2026-10-29-v016-review.ccproj.json;
+readback confirms the original graph/metadata, with only the saved view changed.
+Core circuit/calculation/DC/schematic files and examples are unchanged from
+session base `101a157`. Native v1/project v3/CSV v1 and dependencies are unchanged.
+Hosted Linux execution remains unverified; no push/dispatch/publication occurred.
+
 ## Exact next action
 
-Commit GUI-10. Then split the growing opt-in Tk harness into
-feature modules while preserving headless discovery, installed isolation, test
-names/order and main-thread cleanup. Keep phase 6 in progress.
+Review the four completed batches at the clean local commit checkpoint. Next
+implement a read-only two-point voltage probe with explicit A-minus-B convention,
+net-alias/reference invariance, stale-result and finite-difference range guards.
+Keep phase 6/7 in progress and do not infer unresolved individual wire currents.
 Obtain hosted CI evidence after a user push; pushing is not authorized here.

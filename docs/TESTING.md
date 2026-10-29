@@ -114,6 +114,16 @@ accommodate an implementation error.
 
 ## Latest local run: 2026-10-29
 
+TESTS-1 mechanically moved the GUI suite into feature mixins. All **117 method
+ASTs** (98 tests, 19 helpers) match after normalizing only two workspace-root
+lookups. Runtime names/order/count remain identical. Ordinary 305-test discovery
+imports no Tk. Both interpreters passed **305 headless / 98 source Tk**; fresh
+offline installs passed **278 core plus 27 skips / 305 DC-enabled / 98 installed
+Tk** and all origin/CLI/CSV/dependency/editable checks. The extracted source archive
+also passed all 98 GUI workflows on Python 3.11. Native review exercised search,
+reveal, inspection, edit invalidation, Undo, Fit, solve, wire policy and Save.
+Application source and local version 0.16.0 are unchanged by this maintenance batch.
+
 GUI-10 passed **305 headless tests / 98 source Tk workflows** on both interpreters,
 with **278 core plus 27 expected skips**. Fresh offline core/DC/GUI installations
 on both passed those same counts and origin/CLI/CSV/dependency/editable checks.

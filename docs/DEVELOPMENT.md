@@ -157,3 +157,7 @@ geometry-only reveal positions. The lazy Find form stores raw identities apart
 from labels and revalidates against current state when returning to the controller.
 Controller callbacks remain in gui.py. Viewport tests that assert actual visible
 fit map their test window first; a withdrawn 1-pixel drawing area cannot be fitted.
+The opt-in runner assembles feature mixins from tests/gui_workflows/. Its initializer
+is empty and module names omit test_, keeping regular discovery headless. Installed
+mode checks product origins first, then adds only the tests directory for helpers.
+Keep test IDs/order and base.py main-thread cleanup stable. See TK_TEST_LAYOUT.md.
