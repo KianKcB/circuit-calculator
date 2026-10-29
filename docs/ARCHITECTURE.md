@@ -7,6 +7,10 @@ See [VOLTAGE_PROBE.md](VOLTAGE_PROBE.md).
 Optional node-voltage annotations use pure annotations.py formatting and decorative
 Canvas labels. They participate in Fit, with base scroll-region bounds unchanged,
 and are never persisted. See [RESULT_ANNOTATIONS.md](RESULT_ANNOTATIONS.md).
+Component current/power blocks reuse actual component label boxes/anchors with
+generated indexes. Their signed values come from accepted ElementResult snapshots,
+with explicit terminal direction and passive power convention. Both annotation
+types share freshness/Fit behavior. See [COMPONENT_ANNOTATIONS.md](COMPONENT_ANNOTATIONS.md).
 
 The local checkout is authoritative. Application implementations live in the
 `circuit_calculator/` package. Its calculations.py contains standalone formulas,

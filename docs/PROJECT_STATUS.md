@@ -1,9 +1,9 @@
 # Project status and continuation
 
-Date: 2026-10-29. This session began at `8881704` with a clean working tree and
+Date: 2026-10-29. This session began at `a5e41f4` with a clean working tree and
 no unrelated changes. The user has authorized staging
 and committing completed local batches; pushing remains a separate action.
-Package version is now 0.18.0;
+Package version is now 0.19.0;
 electrical document v1 and schematic-project v3 are separate formats. Project-v1/v2
 loading remains supported.
 Use README and DEVELOPMENT.md for current package paths/commands; historical
@@ -1038,10 +1038,46 @@ core circuit/formula/solver/schematic, dependencies and formats are unchanged.
 ANNOTATE-1 is locally VERIFIED. No push, hosted dispatch or publication occurred;
 hosted Linux results remain unverified.
 
+## Batch ANNOTATE-2: component current and power blocks
+
+Base `a5e41f4`, no unrelated changes. Component I / P independently opts into
+signed I, explicit positive terminal direction and signed P classified as absorbed,
+delivered or exact zero. The pure annotations helper reads accepted ElementResult
+snapshots; no current/power recomputation or tolerance. Wires get no branch values.
+The renderer reuses actual label boxes/anchors with generated component indexes,
+covering four rotations and legacy parallel offsets without user-name tag queries.
+Blocks have decorative tags and share the existing freshness/Fit path. Camera
+fractions, dirty state, document/history and exports are preserved by toggles.
+
+A new deletion-to-empty regression first reproduced a stale-scene IndexError:
+result clearing runs before old label indexes are redrawn. Empty component labels
+now return after clearing decorations, before consulting those old indexes. The
+regression passes with the checkbox both off and on. Dense layouts may overlap
+text; collision avoidance and movable annotations remain planned.
+
+The baseline **317** headless tests passed before edits. Source runs now pass
+**326** tests on Python 3.11.9/3.14.6, with **295 core plus 31 NumPy skips**.
+Nine pure/import/physical tests and eight GUI workflows cover signed divider and
+current-source values, reversed source/resistor orientation, reference invariance,
+zero/tiny/non-finite values, unchanged JSON/CSV, rotations/parallel/special names,
+decorative tags, Fit/minimum controls, independent toggles/camera, preview hiding,
+deletion/empty scenes and history/reset/pending/failed/stale results.
+Both interpreters passed **117 source Tk workflows**. Fresh offline installations
+on both passed **295 core plus 31 skips / 326 DC-enabled / 117 installed Tk** under
+pinned NumPy 2.4.6, including origin/command/CSV/dependency/editable checks.
+Native review of the routed divider verified −4 mA/−48 mW source delivery,
+4 mA with 16/32 mW resistor absorption, explicit terminal direction, Fit and both
+annotation types together. The saved ignored v019 review copy preserves the
+original graph and metadata; only its fitted view changed.
+Package version is 0.19.0; core model/formulas/DC/schematic, formats,
+examples and dependency declarations are unchanged.
+ANNOTATE-2 is locally VERIFIED. Hosted Linux execution remains unverified; no push,
+hosted dispatch or publication occurred.
+
 ## Exact next action
 
-Review the completed ANNOTATE-1 commit. Next specify component current/power
-annotations with explicit terminal direction,
-passive sign convention, label placement and freshness tests. Automatic collision
-avoidance remains planned. Keep phases 6/7 in progress; individual wire current
-is unresolved. Obtain hosted CI evidence after a user push; pushing is not authorized.
+Review the completed ANNOTATE-2 commit. Next specify bounded
+deterministic annotation collision reduction with geometry/text obstacles, explicit
+dense-layout fallback and Fit/camera invariants. Movable labels/plots remain planned.
+Keep phases 6/7 in progress; individual wire current is unresolved. Hosted evidence
+requires a user push; pushing is not authorized here.

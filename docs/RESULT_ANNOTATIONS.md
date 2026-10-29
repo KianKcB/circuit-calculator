@@ -1,8 +1,10 @@
 # ANNOTATE-1: optional node-voltage labels
 
 Scope: read-only DC node voltages beside existing junction/terminal names.
-An opt-in Node voltages checkbox controls presentation only. No branch-current,
-power, wire-current or color-scale inference. No project/schema changes.
+An opt-in Node voltages checkbox controls presentation only. This option adds no
+branch-current, power, wire-current or color-scale inference. The independent
+Component I / P option is defined in [COMPONENT_ANNOTATIONS.md](COMPONENT_ANNOTATIONS.md).
+No project/schema changes.
 
 Every label uses the exact endpoint identity, resolves explicit wire aliases,
 and reads only the current accepted EditorSession.result. Values are relative

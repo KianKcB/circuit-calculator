@@ -46,7 +46,7 @@ progress and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for development commands
   Windows and Linux. Newer versions are outside the current test matrix.
 - The formula CLI and circuit model need only the standard library. DC solving
   adds the optional NumPy dependency.
-- Version 0.18.0 is currently a local development package. Installation commands
+- Version 0.19.0 is currently a local development package. Installation commands
   below use this checkout; it has not been published to a package registry.
 
 Open a terminal in the project directory and check that Python is available:
@@ -406,6 +406,11 @@ Enable **Node voltages** to show current voltages beside junctions and terminals
 when results become outdated. **Fit circuit** includes the labels. The display
 choice is temporary and does not change the saved circuit. Dense layouts may
 still have overlapping labels. See [RESULT_ANNOTATIONS.md](docs/RESULT_ANNOTATIONS.md).
+Enable **Component I / P** independently to show signed current and power beside
+each component. `+I` states the positive terminal direction; a negative current
+flows the other way. Positive power is absorbed and negative power delivered.
+These labels also use only current results and participate in Fit. See
+[COMPONENT_ANNOTATIONS.md](docs/COMPONENT_ANNOTATIONS.md) for signs and placement.
 **Find item** (Ctrl+F) filters components, junctions, terminals and wires by name
 or terminal label. **Show item** selects and centers a match without changing
 zoom, connectivity or current results. Matching names in different categories
@@ -421,8 +426,8 @@ show a different view, while electrical data and layout coordinates are preserve
 
 The following are planned ideas and are **not implemented**:
 
-- Multi-component/OS-clipboard copy/paste, obstacle-aware routing, branch annotations,
-  automatic label collision avoidance and richer schematic editing.
+- Multi-component/OS-clipboard copy/paste, obstacle-aware routing, automatic label
+  collision avoidance, movable annotations and richer schematic editing.
 - Extended DC analysis with controlled sources and equivalent-port calculations.
 - RC and RLC circuit analysis.
 

@@ -114,6 +114,22 @@ accommodate an implementation error.
 
 ## Latest local run: 2026-10-29
 
+ANNOTATE-2 passed **326 headless tests** on Python 3.11.9/3.14.6 and **295 core plus
+31 expected NumPy skips** without site-packages. Nine pure/physical tests cover
+signed I/P, explicit terminal direction, current sources, reversed orientations,
+reference invariance, exact zero/tiny/range values, missing results, immutable
+project/CSV and optional imports. Eight Tk workflows cover actual box/anchor placement
+at four rotations, legacy parallel/special identities, independent toggles, camera,
+Fit/minimum controls, preview suppression and freshness. Deleting down to no
+components first exposed an IndexError during stale-scene clearing; the fix and
+off/on regression now pass. Both interpreters passed **117 source Tk workflows**.
+Fresh offline installations on both passed **295 core plus 31 skips / 326 DC-enabled /
+117 installed Tk** and origin/command/CSV/dependency/editable validation under
+pinned NumPy 2.4.6. Package version is 0.19.0; hosted Linux remains unverified.
+Native review verified source delivery and
+resistor absorption, positive-current terminal order, Fit, readable common-divider
+placement and both annotation types together.
+
 ANNOTATE-1 passed **317 headless tests** on Python 3.11.9/3.14.6, with **288 core
 plus 29 optional-NumPy skips** without site-packages. Default discovery imports no
 Tk. Six pure/reference tests and six GUI workflows cover signed/reference-relative

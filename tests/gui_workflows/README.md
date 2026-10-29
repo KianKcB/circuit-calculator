@@ -24,6 +24,6 @@ It must not add the application checkout root. Tests use REPO_ROOT from base.py
 for fixtures/scratch paths, whether running from a checkout or extracted sdist.
 
 Groups: clipboard; document files/details; component/identity editing; item
-navigation; voltage probes; node-voltage annotations; result/quantity presentation;
+navigation; voltage probes; node-voltage and component I/P annotations; result/quantity presentation;
 wire routing; shortcuts; viewport/layout.
 No helpers or GUI test modules are included in the application wheel.

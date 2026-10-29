@@ -24,7 +24,7 @@ def render_schematic(canvas, state, zoom, *, selected=None, selected_bend=None, 
                             width=3, tags=(f'entity:wire:{wire.name}', 'circuit-content'))
     pairs = {}
     placed = {p.element: p for p in state.placements}
-    for element in state.document.circuit.elements:
+    for element_index, element in enumerate(state.document.circuit.elements):
         a, b = terminals(element)
         pair = frozenset((a, b))
         index = pairs.get(pair, 0)
@@ -71,7 +71,8 @@ def render_schematic(canvas, state, zoom, *, selected=None, selected_bend=None, 
         canvas.create_text(cx + px * 38 * zoom, cy + py * 38 * zoom,
                             text=f'{element.name}  {format_quantity(value_of(element), unit)}\n{state.endpoint_label(a)} → {state.endpoint_label(b)}',
                             anchor=('e' if px < 0 else 'w') if abs(px) > .6 else ('s' if py < 0 else 'n'),
-                            fill=color, font=('Segoe UI', 9), tags=tag)
+                            fill=color, font=('Segoe UI', 9),
+                            tags=(*tag, 'component-label', f'component-index:{element_index}'))
     owners = state.terminal_owners()
     for node, (x, y) in positions.items():
         kind = 'terminal' if node in owners else 'node'
@@ -126,3 +127,29 @@ def render_node_annotations(canvas, state, labels, zoom):
             canvas.create_text(position.x * zoom + 20, position.y * zoom + 3,
                                text=labels[position.node], anchor='nw',
                                fill='#1f6650', font=('Segoe UI', 9), tags=('result-annotation',))
+
+
+def render_component_annotations(canvas, state, labels):
+    """Attach decorative measurements to actual label boxes, including legacy offsets."""
+    canvas.delete('component-annotation')
+    if not labels:
+        # Edits clear results before the old scene is rebuilt. Never consult its
+        # previous component indexes against the changed document in that gap.
+        return
+    elements = state.document.circuit.elements
+    for item in canvas.find_withtag('component-label'):
+        index = next(int(tag.split(':', 1)[1]) for tag in canvas.gettags(item)
+                     if tag.startswith('component-index:'))
+        text = labels.get(elements[index].name)
+        bounds = canvas.bbox(item)
+        if text is None or bounds is None:
+            continue
+        original_anchor = canvas.itemcget(item, 'anchor')
+        if original_anchor == 's':
+            x, y, anchor = bounds[0], bounds[1] - 4, 'sw'
+        elif original_anchor == 'e':
+            x, y, anchor = bounds[2], bounds[3] + 4, 'ne'
+        else:
+            x, y, anchor = bounds[0], bounds[3] + 4, 'nw'
+        canvas.create_text(x, y, text=text, anchor=anchor, fill='#1f6650',
+                           font=('Segoe UI', 9), tags=('result-annotation', 'component-annotation'))

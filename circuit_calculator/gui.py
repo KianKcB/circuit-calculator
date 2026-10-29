@@ -11,13 +11,14 @@ from circuit_calculator.schematic import (EditorSession, Position, Schematic, Wi
                        component, divider_example, terminals, value_of, orthogonal_bends)
 from circuit_calculator.project_io import (SchematicProject, ViewState, load_project,
                                           save_project as write_project)
-from .canvas_renderer import render_schematic, render_component_preview, render_node_annotations
+from .canvas_renderer import (render_schematic, render_component_preview, render_node_annotations,
+                              render_component_annotations)
 from .viewport import clamp_zoom, fit_zoom, scroll_region, scroll_fraction
 from .quantities import parse_quantity, format_quantity
 from .shortcuts import shortcut_action
 from .inspection import selection_text
 from .navigation import selection_position
-from .annotations import node_voltage_annotations
+from .annotations import node_voltage_annotations, component_annotations
 
 
 class CircuitEditor:
@@ -89,6 +90,10 @@ class CircuitEditor:
         self.annotation_button = ttk.Checkbutton(wire_actions, text='Node voltages', variable=self.node_voltages,
                                                 command=self.toggle_annotations)
         self.annotation_button.pack(side='left', padx=8)
+        self.component_results = tk.BooleanVar(value=False)
+        self.component_annotation_button = ttk.Checkbutton(wire_actions, text='Component I / P',
+            variable=self.component_results, command=self.toggle_annotations)
+        self.component_annotation_button.pack(side='left', padx=8)
         for label, command in (('Fit circuit', self.fit_circuit), ('100%', lambda: self.set_zoom(1)),
                                ('Project details', self.edit_details), ('Find item', self.find_item)):
             button = ttk.Button(header, text=label, command=command)
@@ -209,14 +214,19 @@ class CircuitEditor:
 
     def toggle_annotations(self):
         self._draw_annotations()
-        self.status.set('Node voltages relative to the simulation reference; (ref) marks its net.'
-                        if self.node_voltages.get() and self.session.result is not None else
-                        'No current DC result. Run Simulate DC (F5) to show node voltages.'
-                        if self.node_voltages.get() else 'Node-voltage labels hidden.')
+        if not (self.node_voltages.get() or self.component_results.get()):
+            message = 'Result labels hidden.'
+        elif self.session.result is None:
+            message = 'No current DC result. Run Simulate DC (F5) to show result labels.'
+        else:
+            message = 'Node V: simulation reference. Component +I: shown terminal order. Positive P: absorbed; negative P: delivered.'
+        self.status.set(message)
 
     def _draw_annotations(self, *, visible=True):
         labels = node_voltage_annotations(self.session.state, self.session.result) if visible and self.node_voltages.get() else {}
         render_node_annotations(self.canvas, self.session.state, labels, self.zoom)
+        components = component_annotations(self.session.state, self.session.result) if visible and self.component_results.get() else {}
+        render_component_annotations(self.canvas, self.session.state, components)
         annotation_bounds = self.canvas.bbox('result-annotation')
         base = self._content_bounds
         self._fit_bounds = (min(base[0], annotation_bounds[0]), min(base[1], annotation_bounds[1]),

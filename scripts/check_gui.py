@@ -28,12 +28,14 @@ else:
 
 # Only test helpers are added in installed mode; never the product checkout root.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tests'))
-from gui_workflows import annotations, base, clipboard, documents, editing, navigation, probe, results, routing, shortcuts, viewport
+from gui_workflows import (annotations, base, clipboard, component_annotations, documents,
+                           editing, navigation, probe, results, routing, shortcuts, viewport)
 
 
 class TkWorkflowTests(
     annotations.AnnotationsMixin,
     clipboard.ClipboardMixin,
+    component_annotations.ComponentAnnotationsMixin,
     documents.DocumentsMixin,
     editing.EditingMixin,
     navigation.NavigationMixin,
