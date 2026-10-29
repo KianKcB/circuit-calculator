@@ -46,7 +46,7 @@ progress and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for development commands
   Windows and Linux. Newer versions are outside the current test matrix.
 - The formula CLI and circuit model need only the standard library. DC solving
   adds the optional NumPy dependency.
-- Version 0.11.0 is currently a local development package. Installation commands
+- Version 0.12.0 is currently a local development package. Installation commands
   below use this checkout; it has not been published to a package registry.
 
 Open a terminal in the project directory and check that Python is available:
@@ -180,8 +180,8 @@ python -m unittest -v
 The menu still exposes only standalone formulas. The Python DC API below solves
 small linear networks of positive resistors and independent sources. The first
 desktop network editor is available below. Controlled/reactive/nonlinear
-components and unit prefixes are not yet
-implemented. Numerical policies and remaining limitations are recorded in
+components are not yet implemented. GUI component values accept SI engineering
+prefixes; numerical policies and remaining limitations are recorded in
 [PROJECT_STATUS.md](docs/PROJECT_STATUS.md).
 
 ## Linear DC analysis from Python
@@ -374,6 +374,12 @@ and Escape cancels. **Duplicate** places a copy 40 units right and down. Canvas
 shortcuts are Ctrl+C/Ctrl+V/Ctrl+D. Each copy has fresh terminals and a fresh name;
 wire it explicitly before simulation. Source wires and ground are not copied.
 See [COMPONENT_COPY.md](docs/COMPONENT_COPY.md) for snapshot/history rules.
+GUI component creation and **Edit value** accept matching units and engineering
+prefixes, for example `4.7kΩ`, `2mA`, `12V`, or bare base-unit numbers. Prefix case
+matters: `m` is milli and `M` is mega. Canvas/results use readable prefixes;
+files and CSV retain base SI values. Dialogs initialize with the full stored
+number, not a rounded label. The formula menu keeps its existing numeric syntax.
+See [QUANTITIES.md](docs/QUANTITIES.md) for accepted units, precision and limits.
 See [WIRE_ROUTING.md](docs/WIRE_ROUTING.md) for routing, splitting and crossing rules.
 See [BEND_EDITING.md](docs/BEND_EDITING.md) for bend handles and right-angle routing.
 See [VIEWPORT.md](docs/VIEWPORT.md) for camera behavior. Scroll bounds now follow

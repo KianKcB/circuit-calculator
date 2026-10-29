@@ -18,6 +18,11 @@ but never alters or reloads a circuit. The CLI retains JSON stdout and optionall
 writes CSV, protecting its input path. GUI export requires a current accepted result;
 camera actions preserve export availability while edits/history/loading clear it.
 See RESULTS_CSV.md for schema, path protection and failure behavior.
+quantities.py adds bounded SI-prefix GUI input and rounded engineering display.
+Decimal coefficient/exponent scaling ignores ambient rounding contexts; the
+existing model still enforces finite representable base-unit parameters.
+Canvas/result text is presentation only; edit fields initialize with full float
+representations and exports retain normalized values. See QUANTITIES.md.
 
 `schematic.py` now owns immutable layout/junction/wire/component-placement state, explicit net
 resolution and revision-scoped undo/results. `gui.py` renders that state with Tk

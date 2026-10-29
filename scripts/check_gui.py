@@ -23,7 +23,7 @@ if '--installed' in sys.argv:
     if not sys.flags.isolated:
         raise RuntimeError('Installed GUI checks require Python -I isolation')
     for module in ('circuit_calculator', 'circuit_calculator.gui', 'circuit_calculator.canvas_renderer',
-                   'circuit_calculator.viewport', 'circuit_calculator.results_io',
+                   'circuit_calculator.viewport', 'circuit_calculator.results_io', 'circuit_calculator.quantities',
                    'circuit_calculator.schematic', 'circuit_calculator.dc', 'circuit_calculator.project_io'):
         spec = importlib.util.find_spec(module)
         if spec is None or spec.origin is None or not Path(spec.origin).resolve().is_relative_to(Path(sys.prefix).resolve()):
@@ -43,6 +43,78 @@ from circuit_calculator.project_io import load_project, save_project, SchematicP
 
 
 class TkWorkflowTests(unittest.TestCase):
+    def test_prefixed_value_edit_solves_known_divider_and_exports_base_units(self):
+        self.app.selected = ('element', 'R1')
+        with patch('tkinter.simpledialog.askstring', return_value='2kΩ'):
+            self.app.edit_value()
+        self.assertEqual(self.app.session.state.document.circuit.elements[1].resistance_ohms, 2000)
+        self.app.simulate()
+        self.wait_for_result()
+        result = self.app.session.result
+        self.assertAlmostEqual(result.node_voltages['out'], 6)
+        self.assertAlmostEqual(result.elements['R1'].current_amperes, .003)
+        self.assertAlmostEqual(result.elements['V1'].power_watts, -.036)
+        text = self.app.results.get('1.0', 'end')
+        self.assertIn('out: 6 V', text)
+        self.assertIn('I 3 mA', text)
+        self.assertIn('P -36 mW', text)
+        path = self.project_path().with_suffix('.csv')
+        with patch('tkinter.filedialog.asksaveasfilename', return_value=str(path)):
+            self.app.export_results()
+        with path.open(encoding='utf-8', newline='') as stream:
+            rows = list(csv.DictReader(stream))
+        current = next(r for r in rows if r['identifier'] == 'element:R1' and r['quantity'] == 'current')
+        self.assertEqual(current['unit'], 'A')
+        self.assertEqual(float(current['value']), result.elements['R1'].current_amperes)
+
+    def test_prefixed_component_creation_uses_same_parser_for_free_and_junction_modes(self):
+        self.mode('current')
+        with patch('tkinter.simpledialog.askstring', side_effect=['I2', '-250uA']):
+            self.app.click(self.point(800, 400))
+        current = self.app.session.state.document.circuit.elements[-1]
+        self.assertEqual(current.current_amperes, -.00025)
+        self.mode('resistor')
+        with patch('tkinter.simpledialog.askstring', side_effect=['Rx', '4.7 kohm']):
+            self.app.click(self.node('out'))
+            self.app.click(self.node('g'))
+        self.assertEqual(self.app.session.state.document.circuit.elements[-1].resistance_ohms, 4700)
+
+    def test_prefixed_editor_rejects_wrong_units_and_preserves_complete_initial_value(self):
+        self.app._apply(self.app.session.state.change_value('R1', 1234.567891234567))
+        self.app.simulate()
+        self.wait_for_result()
+        before, result, revision = self.app._snapshot(), self.app.session.result, self.app.session.revision
+        self.app.selected = ('element', 'R1')
+        for text in ('2mA', '2KΩ', '4k7', '1e-400Ω', '1e400kΩ'):
+            with self.subTest(text=text), patch('tkinter.simpledialog.askstring', return_value=text):
+                self.app.edit_value()
+            self.assertEqual(self.app._snapshot(), before)
+            self.assertIs(self.app.session.result, result)
+            self.assertEqual(self.app.session.revision, revision)
+        with patch('tkinter.simpledialog.askstring', side_effect=lambda *args, **kwargs: kwargs['initialvalue']) as dialog:
+            self.app.edit_value()
+            self.assertEqual(dialog.call_args.kwargs['initialvalue'], '1234.567891234567')
+        self.assertEqual(self.app._snapshot(), before)
+        self.assertIs(self.app.session.result, result)
+        self.assertEqual(self.app.session.revision, revision)
+
+    def test_canvas_results_and_copy_preview_use_readable_quantities(self):
+        labels = [self.app.canvas.itemcget(i, 'text') for i in self.app.canvas.find_withtag('entity:element:R1')
+                  if self.app.canvas.type(i) == 'text']
+        self.assertTrue(any('1 kΩ' in label for label in labels))
+        self.app.simulate()
+        self.wait_for_result()
+        self.assertIn('I 4 mA', self.app.results.get('1.0', 'end'))
+        self.assertIn('P -48 mW', self.app.results.get('1.0', 'end'))
+        self.app.selected = ('element', 'R1')
+        self.app.copy_selected()
+        self.app.paste()
+        self.app.route_motion(self.point(700, 400))
+        labels = [self.app.canvas.itemcget(i, 'text') for i in self.app.canvas.find_withtag('paste-preview')
+                  if self.app.canvas.type(i) == 'text']
+        self.assertTrue(any('1 kΩ' in label for label in labels))
+        self.app.cancel()
+
     def test_paste_rotation_changes_only_pending_copy(self):
         self.app.selected = ('element', 'R1')
         self.app.copy_selected()
@@ -84,18 +156,32 @@ class TkWorkflowTests(unittest.TestCase):
         self.root.deiconify()
         self.root.update()
         self.app.canvas.focus_force()
+        self.root.update()
+        self.assertIs(self.root.focus_get(), self.app.canvas)
+        def send(key, windows_keycode):
+            identity = {'keycode': windows_keycode} if sys.platform == 'win32' else {'keysym': key}
+            self.app.canvas.event_generate('<KeyPress>', state=4, when='tail', **identity)
+            self.root.update()
         self.app.selected = ('element', 'R1')
-        self.app.canvas.event_generate('<Control-c>')
-        self.root.update()
+        if sys.platform == 'win32':
+            self.app.canvas.event_generate('<Control-Alt-KeyPress>', keycode=67, when='tail')
+            self.root.update()
+            self.assertIsNone(self.app.clipboard)
+        send('c', 67)
         self.assertIsNotNone(self.app.clipboard)
-        self.app.canvas.event_generate('<Control-v>')
-        self.root.update()
+        send('v', 86)
         self.assertEqual(self.app.mode, 'paste')
         self.app.click(self.point(700, 400))
-        self.app.canvas.event_generate('<Control-d>')
-        self.root.update()
+        send('d', 68)
         self.assertEqual(len(self.app.session.state.document.circuit.elements), 5)
         self.assertEqual(self.app.selected, ('element', 'R4'))
+
+    def test_clipboard_key_dispatch_ignores_altgr_and_other_commands(self):
+        self.app.selected = ('element', 'R1')
+        self.assertIsNone(self.app._clipboard_key(SimpleNamespace(keysym='c', keycode=67, state=12)))
+        self.assertIsNone(self.app._clipboard_key(SimpleNamespace(keysym='c', keycode=67, state=0x20004)))
+        self.assertIsNone(self.app._clipboard_key(SimpleNamespace(keysym='z', keycode=90, state=4)))
+        self.assertIsNone(self.app.clipboard)
 
     def test_component_copy_preview_cancel_preserves_result_history_and_scroll(self):
         self.app.simulate()

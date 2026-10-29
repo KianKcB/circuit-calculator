@@ -30,6 +30,13 @@ the original immutable state unchanged.
 ## Controller workflow
 
 Copy (Ctrl+C on the canvas) captures the selected component body. It preserves
+the current value and rotation. On Windows, clipboard shortcuts also use physical
+virtual keycodes so non-Latin keyboard layouts work; Alt/AltGr input is ignored.
+The keycodes follow [Microsoft's virtual-key table](https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes).
+Other platforms retain Latin key-symbol dispatch. Other existing letter shortcuts
+(such as R/F and Ctrl+Z) still depend on the active keyboard layout; toolbar
+actions remain available. Broader shortcut normalization is a separate follow-up.
+Copy preserves
 the graph, current result and dirty/history state. Paste (Ctrl+V) enters a visible
 placement mode. Show a snapped preview at the pointer, then commit one copy on
 the next click; R rotates only the pending copy, preserving source and clipboard.

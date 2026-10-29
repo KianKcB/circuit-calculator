@@ -1,9 +1,9 @@
 # Project status and continuation
 
-Date: 2026-10-29. GUI-8 began at `4048f91` with a clean working tree and
+Date: 2026-10-29. UNITS-1 began at `4197342` with a clean working tree and
 no unrelated changes. The user has authorized staging
 and committing completed local batches; pushing remains a separate action.
-Package version is now 0.11.0;
+Package version is now 0.12.0;
 electrical document v1 and schematic-project v3 are separate formats. Project-v1/v2
 loading remains supported.
 Use README and DEVELOPMENT.md for current package paths/commands; historical
@@ -787,8 +787,48 @@ command/CSV/origin/dependency/editable checks. They used the same pinned cached
 wheels offline. One interrupted 3.14 checker was rerun from a new environment to
 completion. No solver/model/formula changes, dependency changes or pushes.
 
+## Batch UNITS-1: exact engineering input and readable SI display
+
+quantities.py adds bounded decimal/scientific GUI input with optional matching
+Ω/ohm/V/A/W units and case-sensitive engineering prefixes q through Q. Micro
+aliases u/µ/μ are accepted. Prefix factors were checked against the BIPM table
+linked in QUANTITIES.md. Decimal tuple scaling avoids ambient context rounding;
+model physical/range guards remain authoritative. Wrong units, malformed input,
+non-finite values, expressions and SPICE suffix syntax fail clearly. The dialog's
+new strict ASCII grammar is documented as a compatibility choice.
+
+GUI creation/value editing use the shared parser. Canvas labels and paste previews
+use six significant digits with engineering prefixes; results use nine and
+diagnostics three. Rounded coefficients promote at 1000, extreme finite values
+use scientific base units and signed zero is preserved. Edit fields retain full
+base-unit representations. JSON/CSV/model values are never derived from labels.
+The DC engine, core model, scalar formulas, file schemas and CLI syntax are unchanged.
+
+Source checks passed **275 headless tests** on 3.11.9/3.14.6; core-only passed
+**250 with 25 expected skips**. Eleven quantity tests cover all prefixes/aliases,
+case/units, exact decimal contexts, boundaries/extremes, range guards and unchanged
+serialization. Four new Tk workflows cover prefixed creation/edit/known-answer
+solve, full numeric no-op, labels/previews and full-precision base-unit CSV.
+The first runs passed **73 Tk workflows** on both source interpreters. Installed
+validation then exposed a layout-dependent Copy keyboard failure: the active
+non-Latin keyboard layout has no Tk Latin-c keycode. A focus-only harness change
+did not fix it. Canvas Copy/Paste/Duplicate now dispatch Windows physical virtual
+keycodes as well as Latin key symbols, excluding Alt/AltGr. Tests send Windows
+virtual keys after asserting focus; a new check covers AltGr/unrelated keys.
+Native Alt/Ctrl synthesis also showed Windows uses its own Alt state bit; the
+guard now handles it and a real Alt/Ctrl event is included in the shortcut test.
+Both interpreters passed **74 source Tk workflows**, with focused final shortcut
+checks after that guard correction. Rebuilt fresh installs on both passed **250
+core tests plus 25 expected skips**, **275 DC tests**, **74 isolated installed Tk
+workflows** and import/CLI/CSV/dependency/editable checks, offline with pinned
+NumPy 2.4.6. An additional fixed-seed (20261029) diagnostic checked 9,995 finite
+random float displays, all with correct nonzero signs and relative rounding
+difference below 5e-6 at six significant digits (observed maximum 4.916e-6).
+This is display QA, not a simulation-accuracy claim. Syntax/local-document-link
+and whitespace checks pass. Hosted Linux execution remains unverified.
+
 ## Exact next action
 
-GUI-8 is verified locally and ready for its commit. Next add SI-prefix display/input and project
-metadata editing in separate scoped batches. Keep full phase 6 in progress.
+UNITS-1 is verified locally and ready for its commit. Next add project metadata editing in a
+separate scoped batch. Keep full phase 6 in progress.
 Obtain hosted CI evidence after a user push; pushing is not authorized here.

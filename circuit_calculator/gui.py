@@ -2,9 +2,9 @@
 
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
-from decimal import Decimal, InvalidOperation
 import math
 from pathlib import Path
+import sys
 
 from circuit_calculator.circuit import Circuit, CurrentSource, Resistor, VoltageSource
 from circuit_calculator.circuit_io import CircuitDocument, load_document, save_document
@@ -14,6 +14,7 @@ from circuit_calculator.project_io import (SchematicProject, ViewState, load_pro
                                           save_project as write_project)
 from .canvas_renderer import render_schematic, render_component_preview
 from .viewport import clamp_zoom, fit_zoom, scroll_region, scroll_fraction
+from .quantities import parse_quantity, format_quantity
 
 
 class CircuitEditor:
@@ -127,9 +128,7 @@ class CircuitEditor:
         self.canvas.bind('<Key-r>', lambda event: self.rotate())
         self.canvas.bind('<Key-R>', lambda event: self.rotate())
         self.canvas.bind('<F2>', lambda event: self.rename())
-        self.canvas.bind('<Control-c>', lambda event: self.copy_selected())
-        self.canvas.bind('<Control-v>', lambda event: self.paste())
-        self.canvas.bind('<Control-d>', lambda event: self.duplicate())
+        self.canvas.bind('<Control-KeyPress>', self._clipboard_key)
         self.canvas.bind('<BackSpace>', lambda event: self.remove_bend())
         self.canvas.bind('<Delete>', lambda event: self.delete())
         self.canvas.bind('<space>', self.toggle_route_order)
@@ -482,7 +481,7 @@ class CircuitEditor:
                         self._create_component(first, name)
             else:
                 self.status.set('Choose an explicit junction dot; wire crossings are not junctions.')
-        except (ValueError, TypeError, InvalidOperation) as error:
+        except (ValueError, TypeError) as error:
             if self.mode != 'wire':
                 self._clear_route()
             self._error(error)
@@ -496,13 +495,15 @@ class CircuitEditor:
         if name is None:
             return
         unit = {'resistor': 'ohms', 'voltage': 'volts (+ to −)', 'current': 'amperes (from to)'}[self.mode]
-        value = simpledialog.askstring('Component', f'Value in {unit}:', initialvalue='1000' if self.mode == 'resistor' else '1', parent=self.root)
+        value = simpledialog.askstring('Component', f'Value in {unit} (SI prefixes allowed: 4.7k, 2m, 3u):', initialvalue='1000' if self.mode == 'resistor' else '1', parent=self.root)
         if value is None:
             return
+        symbol = {'resistor': 'ohm', 'voltage': 'V', 'current': 'A'}[self.mode]
+        value = parse_quantity(value, symbol)
         if position is None:
-            state = self.session.state.add_element(component(self.mode, name, first, second, Decimal(value)))
+            state = self.session.state.add_element(component(self.mode, name, first, second, value))
         else:
-            state = self.session.state.add_placed_component(self.mode, name, *position, Decimal(value))
+            state = self.session.state.add_placed_component(self.mode, name, *position, value)
         self._apply(state)
         self.status.set(f'Added {name}. Use Wire to connect its terminal dots.')
 
@@ -687,6 +688,19 @@ class CircuitEditor:
             Waypoint(*coordinates)
         return x, y
 
+    def _clipboard_key(self, event):
+        if event.state & 0x20008:  # X11 Mod1 or Tk's Windows Alt bit; ignore Alt/AltGr.
+            return None
+        key = event.keysym.lower()
+        if sys.platform == 'win32':
+            # Tk may report non-Latin keysyms for Windows virtual letter keys.
+            key = {67: 'c', 86: 'v', 68: 'd'}.get(event.keycode, key)
+        command = {'c': self.copy_selected, 'v': self.paste, 'd': self.duplicate}.get(key)
+        if command is not None:
+            command()
+            return 'break'
+        return None
+
     def copy_selected(self):
         if not self.selected or self.selected[0] != 'element':
             self.status.set('Select a component body to copy. Wires and junctions are not copied.')
@@ -747,11 +761,12 @@ class CircuitEditor:
         if element is None:
             return
         unit = 'ohms (> 0)' if type(element) is Resistor else 'volts, V(+) - V(-)' if type(element) is VoltageSource else 'amperes, positive from first to second terminal'
-        text = simpledialog.askstring('Edit value', f'{element.name}: value in {unit}:', initialvalue=str(value_of(element)), parent=self.root)
+        text = simpledialog.askstring('Edit value', f'{element.name}: value in {unit}. SI prefixes allowed (m = milli, M = mega):', initialvalue=str(value_of(element)), parent=self.root)
         if text is not None:
             try:
-                self._apply(self.session.state.change_value(element.name, Decimal(text)))
-            except (TypeError, ValueError, InvalidOperation) as error:
+                symbol = 'ohm' if type(element) is Resistor else 'V' if type(element) is VoltageSource else 'A'
+                self._apply(self.session.state.change_value(element.name, parse_quantity(text, symbol)))
+            except (TypeError, ValueError) as error:
                 self._error(error)
 
     def rotate(self):
@@ -971,15 +986,16 @@ class CircuitEditor:
                 self.status.set('Circuit changed while solving. Run Simulate DC again.')
                 return
             mapping = self.session.state.net_names()
-            lines = ['Node voltages (V)']
-            lines += [f'{self.session.state.endpoint_label(node)}: {result.node_voltages[net]:.9g}' for node, net in mapping.items()]
-            lines += ['', 'Components (V, A, W)']
+            lines = ['Node voltages (SI prefixes)']
+            lines += [f'{self.session.state.endpoint_label(node)}: {format_quantity(result.node_voltages[net], "V", significant=9)}' for node, net in mapping.items()]
+            lines += ['', 'Components (SI prefixes)']
             for name, value in result.elements.items():
-                lines += [name, f'  V {value.voltage_volts:.9g}', f'  I {value.current_amperes:.9g}',
-                          f'  P {value.power_watts:.9g}']
+                lines += [name, f'  V {format_quantity(value.voltage_volts, "V", significant=9)}',
+                          f'  I {format_quantity(value.current_amperes, "A", significant=9)}',
+                          f'  P {format_quantity(value.power_watts, "W", significant=9)}']
             lines += ['', 'Positive power: absorbed', 'Negative power: delivered',
-                      f'KCL residual: {result.max_kcl_residual_amperes:.3g} A',
-                      f'Power balance: {result.power_balance_watts:.3g} W']
+                      f'KCL residual: {format_quantity(result.max_kcl_residual_amperes, "A", significant=3)}',
+                      f'Power balance: {format_quantity(result.power_balance_watts, "W", significant=3)}']
             self._text('\n'.join(lines))
             self._export_availability()
             self.status.set('DC solved. Results follow each component’s displayed terminal order.')

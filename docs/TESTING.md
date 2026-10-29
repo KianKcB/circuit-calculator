@@ -114,6 +114,18 @@ accommodate an implementation error.
 
 ## Latest local run: 2026-10-29
 
+UNITS-1 passed **275 headless tests** on both interpreters and **250 core tests
+with 25 expected skips** without NumPy. Eleven quantity tests and four GUI
+workflows cover exact input, all engineering prefixes, decimal contexts, unit/
+case errors, extreme finite display, rounding boundaries, untouched numeric data,
+prefixed creation/edit/solve and full-precision base-unit CSV. Source Tk runs passed
+74 checks after adding keyboard-layout coverage. Fresh installs on both passed
+**250 core plus 25 skips / 275 DC / 74 Tk**, with pinned NumPy 2.4.6 and all
+entry-point/origin/dependency/editable checks. Two earlier installed Tk runs failed
+on the non-Latin synthetic Ctrl+C path; the actual virtual-key/Alt modifier fix
+then passed native modifier, focused shortcut and final installed regressions.
+See PROJECT_STATUS.md for a supplementary seeded display-precision diagnostic.
+
 GUI-8 passed **264 headless tests** and **69 source Tk workflows** on both local
 interpreters. The core-only run passed 239 with 25 expected NumPy skips. Fresh
 offline installations on both passed the same 239 core/264 DC/69 installed Tk

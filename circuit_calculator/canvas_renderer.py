@@ -4,6 +4,7 @@ import math
 
 from .circuit import Resistor, VoltageSource
 from .schematic import terminals, value_of, ComponentPlacement
+from .quantities import format_quantity
 
 
 def render_schematic(canvas, state, zoom, *, selected=None, selected_bend=None, pending=None, mode='select', preview=None):
@@ -68,7 +69,7 @@ def render_schematic(canvas, state, zoom, *, selected=None, selected_bend=None, 
                                     arrow='last', fill=color, width=2, tags=tag)
                 unit = 'A'
         canvas.create_text(cx + px * 38 * zoom, cy + py * 38 * zoom,
-                            text=f'{element.name}  {value_of(element):g} {unit}\n{state.endpoint_label(a)} → {state.endpoint_label(b)}',
+                            text=f'{element.name}  {format_quantity(value_of(element), unit)}\n{state.endpoint_label(a)} → {state.endpoint_label(b)}',
                             anchor=('e' if px < 0 else 'w') if abs(px) > .6 else ('s' if py < 0 else 'n'),
                             fill=color, font=('Segoe UI', 9), tags=tag)
     owners = state.terminal_owners()
@@ -113,5 +114,5 @@ def render_component_preview(canvas, template, x, y, zoom):
         canvas.create_oval(px - 5, py - 5, px + 5, py + 5, fill='white', outline=color, tags=tag)
         canvas.create_text(px + 10, py - 12, text=label, fill=color, anchor='w', tags=tag)
     unit = {'resistor': 'ohm', 'voltage': 'V', 'current': 'A'}[template.kind]
-    canvas.create_text(cx, cy + 32 * zoom, text=f'Paste {template.kind}: {template.value:g} {unit}',
+    canvas.create_text(cx, cy + 32 * zoom, text=f'Paste {template.kind}: {format_quantity(template.value, unit)}',
                        fill=color, anchor='n', tags=tag)
